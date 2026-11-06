@@ -2,7 +2,7 @@ import { showAlert } from '../platform';
 import React, { useState } from 'react';
 import { Alert, ScrollView, Text, View } from 'react-native';
 import { useStore } from '../store';
-import { testAI } from '../ai';
+import { testAI, cleanKey } from '../ai';
 import { Button, Chip, Field, Header, SectionTitle, s } from '../components';
 import { colors } from '../theme';
 
@@ -60,13 +60,13 @@ export default function SettingsScreen({ nav }) {
             </View>
             {openai ? (
               <>
-                <Field label="OpenAI API key" value={f.openaiKey} onChangeText={set('openaiKey')} placeholder="sk-…" autoCapitalize="none" autoCorrect={false} secureTextEntry />
-                <Field label="Model" value={f.openaiModel} onChangeText={set('openaiModel')} autoCapitalize="none" autoCorrect={false} />
+                <Field label="OpenAI API key" value={f.openaiKey} onChangeText={(v) => set('openaiKey')(cleanKey(v))} placeholder="sk-…" autoCapitalize="none" autoCorrect={false} secureTextEntry />
+                <Field label="Model" value={f.openaiModel} onChangeText={(v) => set('openaiModel')(v.trim())} autoCapitalize="none" autoCorrect={false} />
                 <Text style={[s.sub, { marginBottom: 8 }]}>Get a key at platform.openai.com → API keys. API usage is billed separately from a ChatGPT Plus subscription.</Text>
               </>
             ) : (
               <>
-                <Field label="Claude API key" value={f.apiKey} onChangeText={set('apiKey')} placeholder="sk-ant-…" autoCapitalize="none" autoCorrect={false} secureTextEntry />
+                <Field label="Claude API key" value={f.apiKey} onChangeText={(v) => set('apiKey')(cleanKey(v))} placeholder="sk-ant-…" autoCapitalize="none" autoCorrect={false} secureTextEntry />
                 <Field label="Model" value={f.model} onChangeText={set('model')} autoCapitalize="none" autoCorrect={false} />
                 <Text style={[s.sub, { marginBottom: 8 }]}>Get a key at console.anthropic.com → API keys. API usage is billed separately from a Claude subscription.</Text>
               </>

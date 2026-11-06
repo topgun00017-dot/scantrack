@@ -23,13 +23,17 @@ function sampleError(e) {
 
 const API_URL = 'https://api.anthropic.com/v1/messages';
 
+// Pasted keys often carry a trailing newline or spaces, which Android rejects in headers.
+export const cleanKey = (k) => String(k || '').replace(/\s+/g, '');
+
 async function callClaude(settings, body) {
-  if (!settings.apiKey) throw new Error('NO_KEY');
+  const key = cleanKey(settings.apiKey);
+  if (!key) throw new Error('NO_KEY');
   const res = await fetch(API_URL, {
     method: 'POST',
     headers: {
       'content-type': 'application/json',
-      'x-api-key': settings.apiKey,
+      'x-api-key': key,
       'anthropic-version': '2023-06-01',
     },
     body: JSON.stringify({ model: settings.model || 'claude-sonnet-5-5', max_tokens: 2048, ...body }),
@@ -44,10 +48,11 @@ const OPENAI_URL = 'https://api.openai.com/v1/chat/completions';
 export const DEFAULT_OPENAI_MODEL = 'gpt-5.4-mini';
 
 async function callOpenAI(settings, body) {
-  if (!settings.openaiKey) throw new Error('NO_KEY');
+  const key = cleanKey(settings.openaiKey);
+  if (!key) throw new Error('NO_KEY');
   const res = await fetch(OPENAI_URL, {
     method: 'POST',
-    headers: { 'content-type': 'application/json', authorization: `Bearer ${settings.openaiKey}` },
+    headers: { 'content-type': 'application/json', authorization: `Bearer ${key}` },
     body: JSON.stringify({ model: settings.openaiModel || DEFAULT_OPENAI_MODEL, max_completion_tokens: 4096, ...body }),
   });
   const json = await res.json();
@@ -56,7 +61,7 @@ async function callOpenAI(settings, body) {
 }
 
 export const useOpenAI = (settings) => settings.provider === 'openai';
-export const hasKey = (settings) => (useOpenAI(settings) ? !!settings.openaiKey : !!settings.apiKey);
+export const hasKey = (settings) => !!cleanKey(useOpenAI(settings) ? settings.openaiKey : settings.apiKey);
 
 // Quick check that the key and model work; throws with the provider's error message.
 export async function testAI(settings) {
