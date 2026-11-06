@@ -1,24 +1,45 @@
 {
   "expo": {
-    "name": "scantrack",
+    "name": "ScanTrack",
     "slug": "scantrack",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "dark",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSCameraUsageDescription": "ScanTrack uses the camera to scan your receipts.",
+        "NSPhotoLibraryUsageDescription": "ScanTrack lets you upload receipt photos from your library."
+      },
+      "bundleIdentifier": "com.scantrack.app"
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#0F1420",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
-      }
+      },
+      "package": "com.scantrack.app",
+      "blockedPermissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.SYSTEM_ALERT_WINDOW"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "backgroundColor": "#0F1420",
+    "plugins": [
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "ScanTrack uses the camera to scan your receipts.",
+          "photosPermission": "ScanTrack lets you upload receipt photos from your library.",
+          "microphonePermission": false
+        }
+      ]
+    ]
   }
 }
