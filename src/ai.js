@@ -1,4 +1,4 @@
-// Claude API calls: receipt extraction (vision) and the assistant's tool-use loop.
+// AI calls (Claude or OpenAI/ChatGPT): receipt extraction (vision) and the assistant's tool-use loop.
 // NOTE: calling the API straight from the phone with a key stored on-device is fine
 // for testing in Expo Go. For a production release, route these calls through your
 // own backend so the key never ships inside the app.
@@ -39,6 +39,35 @@ async function callClaude(settings, body) {
   return json;
 }
 
+// ---------- OpenAI (ChatGPT) ----------
+const OPENAI_URL = 'https://api.openai.com/v1/chat/completions';
+export const DEFAULT_OPENAI_MODEL = 'gpt-5.4-mini';
+
+async function callOpenAI(settings, body) {
+  if (!settings.openaiKey) throw new Error('NO_KEY');
+  const res = await fetch(OPENAI_URL, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', authorization: `Bearer ${settings.openaiKey}` },
+    body: JSON.stringify({ model: settings.openaiModel || DEFAULT_OPENAI_MODEL, max_completion_tokens: 4096, ...body }),
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json?.error?.message || `OpenAI error ${res.status}`);
+  return json;
+}
+
+export const useOpenAI = (settings) => settings.provider === 'openai';
+export const hasKey = (settings) => (useOpenAI(settings) ? !!settings.openaiKey : !!settings.apiKey);
+
+// Quick check that the key and model work; throws with the provider's error message.
+export async function testAI(settings) {
+  if (useOpenAI(settings)) {
+    await callOpenAI(settings, { messages: [{ role: 'user', content: 'Reply with OK' }], max_completion_tokens: 200 });
+  } else {
+    await callClaude(settings, { messages: [{ role: 'user', content: 'Reply with OK' }], max_tokens: 20 });
+  }
+  return true;
+}
+
 function parseJSON(text) {
   const m = text.match(/\{[\s\S]*\}/);
   if (!m) throw new Error('Could not read the receipt. Try a clearer photo.');
@@ -70,6 +99,19 @@ Capture every line item. Amounts are plain numbers without currency symbols.`;
     } catch (e) {
       throw sampleError(e);
     }
+  } else if (useOpenAI(settings)) {
+    const json = await callOpenAI(settings, {
+      messages: [
+        {
+          role: 'user',
+          content: [
+            { type: 'text', text: prompt },
+            { type: 'image_url', image_url: { url: `data:${mimeType};base64,${base64}` } },
+          ],
+        },
+      ],
+    });
+    d = parseJSON(json.choices?.[0]?.message?.content || '');
   } else {
     const json = await callClaude(settings, {
       messages: [
@@ -156,6 +198,7 @@ export async function agentTurn(settings, history, runTool) {
   const system = agentSystem(settings);
   const sample = await webSample();
   if (sample) return agentTurnWeb(sample, system, history, runTool);
+  if (useOpenAI(settings)) return agentTurnOpenAI(settings, system, history, runTool);
   let messages = [...history];
   return agentTurnAPI(settings, system, messages, runTool);
 }
@@ -182,6 +225,30 @@ async function agentTurnWeb(sample, system, history, runTool) {
     }
     throw sampleError(e);
   }
+}
+
+async function agentTurnOpenAI(settings, system, history, runTool) {
+  const actions = [];
+  const tools = AGENT_TOOLS.map((t) => ({ type: 'function', function: { name: t.name, description: t.description, parameters: t.input_schema } }));
+  let messages = [{ role: 'system', content: system }, ...history.map((m) => ({ role: m.role, content: String(m.content) }))];
+  for (let step = 0; step < 6; step++) {
+    const res = await callOpenAI(settings, { messages, tools });
+    const msg = res.choices?.[0]?.message || {};
+    const calls = msg.tool_calls || [];
+    if (!calls.length) return { text: (msg.content || '').trim(), actions };
+    messages = [...messages, { role: 'assistant', content: msg.content || null, tool_calls: calls }];
+    for (const c of calls) {
+      let out;
+      try {
+        out = runTool(c.function?.name, JSON.parse(c.function?.arguments || '{}'));
+        if (out?.action) actions.push(out.action);
+      } catch (e) {
+        out = { error: String(e.message || e) };
+      }
+      messages.push({ role: 'tool', tool_call_id: c.id, content: JSON.stringify(out?.data ?? out) });
+    }
+  }
+  return { text: 'I ran out of steps on that one — try a narrower question.', actions };
 }
 
 function agentSystem(settings) {

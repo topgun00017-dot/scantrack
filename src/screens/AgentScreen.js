@@ -88,7 +88,7 @@ export default function AgentScreen({ nav }) {
       if (!list.length) return `No receipts match "${m[1]}".`;
       return `${list.length} receipt(s), ${money(sum(list), settings.currency)}:\n` + list.slice(0, 10).map((x) => `• ${x.date} ${x.merchant} ${money(x.total, x.currency)}`).join('\n');
     }
-    return 'Offline mode understands: "how much did I spend this month", "find <merchant>", and "reconcile". Add a Claude API key in Settings for full tagging and categorising.';
+    return 'Offline mode understands: "how much did I spend this month", "find <merchant>", and "reconcile". Add a Claude or ChatGPT API key in Settings for full tagging and categorising.';
   };
 
   const send = async (text) => {

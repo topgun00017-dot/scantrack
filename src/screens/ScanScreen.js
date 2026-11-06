@@ -106,7 +106,7 @@ export default function ScanScreen({ nav }) {
         {!hasAI && (
           <Card style={{ marginTop: 12, borderColor: colors.warning }} onPress={() => nav.push('settings')}>
             <Text style={[s.body, { fontWeight: '700' }]}>AI reading is off</Text>
-            <Text style={[s.sub, { marginTop: 4 }]}>Add a Claude API key in Settings to auto-read receipts. Until then, photos are saved and you type the details. Tap to open Settings.</Text>
+            <Text style={[s.sub, { marginTop: 4 }]}>Add a Claude or ChatGPT (OpenAI) API key in Settings to auto-read receipts. Until then, photos are saved and you type the details. Tap to open Settings.</Text>
           </Card>
         )}
       </View>

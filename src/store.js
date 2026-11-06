@@ -4,7 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system/legacy';
 import { uid, toISO } from './utils';
 import { autoCategorize } from './categories';
-import { webSample } from './ai';
+import { webSample, hasKey } from './ai';
 import { isWeb } from './platform';
 
 const KEY = 'scantrack:v1';
@@ -15,7 +15,10 @@ const DEFAULT_SETTINGS = {
   currency: 'MYR',
   accountantName: '',
   accountantEmail: '',
+  provider: 'claude', // 'claude' | 'openai'
   apiKey: '',
+  openaiKey: '',
+  openaiModel: 'gpt-5.4-mini',
   model: 'claude-sonnet-5-5',
 };
 
@@ -156,7 +159,7 @@ export function StoreProvider({ children }) {
     };
   }, [settings.currency]);
 
-  const aiReady = webAI || !!settings.apiKey;
+  const aiReady = webAI || hasKey(settings);
   const value = { ready, receipts, reports, settings, aiReady, webAI, ...api };
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
