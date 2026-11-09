@@ -1,4 +1,5 @@
 // Create expense reports: pick a period and receipts, generate a professional report in one tap.
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import React, { useMemo, useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { useStore } from '../store';
@@ -8,6 +9,8 @@ import { CATEGORIES } from '../categories';
 import { allTags, filterReceipts, money, prettyDate, RANGE_PRESETS, rangeFor, sum } from '../utils';
 
 export default function ReportsScreen({ nav, params }) {
+  // Keep the fixed bottom button clear of Android's navigation bar.
+  const bottomInset = useSafeAreaInsets().bottom;
   const { reports, receipts, addReport, settings } = useStore();
   const [creating, setCreating] = useState(!!params?.create);
   const [name, setName] = useState('');
@@ -42,7 +45,7 @@ export default function ReportsScreen({ nav, params }) {
     return (
       <View style={{ flex: 1 }}>
         <Header title="New expense report" onBack={() => (params?.create ? nav.back() : setCreating(false))} />
-        <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 120 }} keyboardShouldPersistTaps="handled">
+        <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 120 + bottomInset }} keyboardShouldPersistTaps="handled">
           <Field label="Report name" value={name} onChangeText={setName} placeholder="e.g. Penang client trip, Nov 2026" />
           <Field label="Business purpose (optional)" value={purpose} onChangeText={setPurpose} placeholder="Client visit, conference…" />
           <SectionTitle>Period</SectionTitle>
@@ -60,7 +63,7 @@ export default function ReportsScreen({ nav, params }) {
             </View>
           ))}
         </ScrollView>
-        <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: 16, backgroundColor: colors.surface, borderTopWidth: 1, borderColor: colors.border }}>
+        <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: 16, paddingBottom: 16 + bottomInset, backgroundColor: colors.surface, borderTopWidth: 1, borderColor: colors.border }}>
           <Button title={`Generate report · ${money(sum(chosen), settings.currency)}`} disabled={!chosen.length} onPress={create} />
         </View>
       </View>

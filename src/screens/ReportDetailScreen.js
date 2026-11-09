@@ -1,4 +1,5 @@
 import { showAlert } from '../platform';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import React, { useState } from 'react';
 import { Alert, ScrollView, Switch, Text, View } from 'react-native';
 import { useStore } from '../store';
@@ -9,6 +10,7 @@ import { categoryMeta } from '../categories';
 import { byCategory, money, prettyDate, sum } from '../utils';
 
 export default function ReportDetailScreen({ nav, params }) {
+  const bottomInset = useSafeAreaInsets().bottom; // clear Android's navigation bar
   const { reports, receipts, settings, updateReport, deleteReport } = useStore();
   const rep = reports.find((r) => r.id === params.id);
   const [withImages, setWithImages] = useState(true);
@@ -45,7 +47,7 @@ export default function ReportDetailScreen({ nav, params }) {
         onBack={nav.back}
         right={<Text style={{ color: colors.danger, fontWeight: '700' }} onPress={() => showAlert('Delete report', 'Receipts stay in your archive.', [{ text: 'Cancel' }, { text: 'Delete', style: 'destructive', onPress: () => { deleteReport(rep.id); nav.back(); } }])}>Delete</Text>}
       />
-      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
+      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 + bottomInset }}>
         <View style={{ flexDirection: 'row', gap: 10 }}>
           <Stat label="Total" value={money(sum(list), cur)} />
           <Stat label="Tax" value={money(sum(list, 'tax'), cur)} />

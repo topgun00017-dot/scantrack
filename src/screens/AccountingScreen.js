@@ -1,5 +1,6 @@
 // Prepare for accounting: tidy the records, then hand a clean package to your accountant.
 import { showAlert } from '../platform';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import React, { useMemo, useState } from 'react';
 import { Alert, ScrollView, Text, View } from 'react-native';
 import { useStore } from '../store';
@@ -9,6 +10,8 @@ import { colors } from '../theme';
 import { filterReceipts, findIssues, ISSUE_LABELS, money, prettyDate, RANGE_PRESETS, rangeFor, sum } from '../utils';
 
 export default function AccountingScreen({ nav }) {
+  // Keep the fixed bottom button clear of Android's navigation bar.
+  const bottomInset = useSafeAreaInsets().bottom;
   const { receipts, settings, deleteReceipt, updateReceipt } = useStore();
   const [preset, setPreset] = useState('this_year');
   const [busy, setBusy] = useState(false);
@@ -62,7 +65,7 @@ export default function AccountingScreen({ nav }) {
   return (
     <View style={{ flex: 1 }}>
       <Header title="Prepare for accounting" onBack={nav.back} />
-      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 120 }}>
+      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 120 + bottomInset }}>
         <RangePicker value={preset} onChange={setPreset} />
         <View style={{ flexDirection: 'row', gap: 10, marginTop: 12 }}>
           <Stat label="Readiness" value={`${ready}%`} tone={ready === 100 ? colors.success : colors.warning} />
@@ -100,7 +103,7 @@ export default function AccountingScreen({ nav }) {
         </Card>
         <Text style={[s.sub, { marginTop: 12 }]}>The package is one ZIP: summary PDF, CSV, Excel workbook, all receipt photos and a list of any open items.</Text>
       </ScrollView>
-      <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: 16, backgroundColor: colors.surface, borderTopWidth: 1, borderColor: colors.border }}>
+      <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: 16, paddingBottom: 16 + bottomInset, backgroundColor: colors.surface, borderTopWidth: 1, borderColor: colors.border }}>
         <Button title="Build package & send to accountant" icon="📦" loading={busy} disabled={!list.length} onPress={confirmHandOff} />
       </View>
     </View>

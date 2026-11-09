@@ -1,4 +1,5 @@
 import { showAlert } from '../platform';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import React, { useState } from 'react';
 import { Alert, ScrollView, Text, View } from 'react-native';
 import { useStore } from '../store';
@@ -9,6 +10,7 @@ import { colors } from '../theme';
 const CURRENCIES = ['MYR', 'SGD', 'USD', 'EUR', 'GBP'];
 
 export default function SettingsScreen({ nav }) {
+  const bottomInset = useSafeAreaInsets().bottom; // clear Android's navigation bar
   const { settings, setSettings, receipts, clearDemo, webAI } = useStore();
   const [f, setF] = useState(settings);
   const set = (k) => (v) => setF((x) => ({ ...x, [k]: v }));
@@ -32,7 +34,7 @@ export default function SettingsScreen({ nav }) {
   return (
     <View style={{ flex: 1 }}>
       <Header title="Settings" onBack={nav.back} />
-      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 48 }} keyboardShouldPersistTaps="handled">
+      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 48 + bottomInset }} keyboardShouldPersistTaps="handled">
         <SectionTitle>Profile</SectionTitle>
         <Field label="Your name" value={f.name} onChangeText={set('name')} placeholder="Shown on reports" />
         <Field label="Company" value={f.company} onChangeText={set('company')} placeholder="Optional" />

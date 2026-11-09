@@ -1,5 +1,6 @@
 // Export data: receipts and expenses as CSV, PDF, Excel or ZIP.
 import { showAlert } from '../platform';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import React, { useMemo, useState } from 'react';
 import { Alert, Pressable, ScrollView, Text, View } from 'react-native';
 import { useStore } from '../store';
@@ -17,6 +18,8 @@ const FORMATS = [
 ];
 
 export default function ExportScreen({ nav, params }) {
+  // Keep the fixed bottom button clear of Android's navigation bar.
+  const bottomInset = useSafeAreaInsets().bottom;
   const { receipts, settings } = useStore();
   const preselected = params?.ids;
   const [preset, setPreset] = useState('this_month');
@@ -44,7 +47,7 @@ export default function ExportScreen({ nav, params }) {
   return (
     <View style={{ flex: 1 }}>
       <Header title="Export data" onBack={nav.back} />
-      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 120 }}>
+      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 120 + bottomInset }}>
         {preselected ? (
           <Card><Text style={s.body}>Exporting {preselected.length} selected receipt(s)</Text></Card>
         ) : (
@@ -75,7 +78,7 @@ export default function ExportScreen({ nav, params }) {
           </Pressable>
         ))}
       </ScrollView>
-      <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: 16, backgroundColor: colors.surface, borderTopWidth: 1, borderColor: colors.border }}>
+      <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: 16, paddingBottom: 16 + bottomInset, backgroundColor: colors.surface, borderTopWidth: 1, borderColor: colors.border }}>
         <Text style={[s.sub, { marginBottom: 8, textAlign: 'center' }]}>{list.length} receipts · {money(sum(list), settings.currency)}</Text>
         <Button title={`Export ${format.toUpperCase()} & share`} loading={busy} disabled={!list.length} onPress={go} />
       </View>
