@@ -1,26 +1,32 @@
 // Track expenses: spending auto-categorised, monthly trend, tax-time readiness.
 import React, { useMemo, useState } from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
 import { useStore } from '../store';
 import { Button, Card, Chip, ChipRow, Header, ReceiptRow, SectionTitle, Stat, s } from '../components';
-import { colors } from '../theme';
+import { colors, radius } from '../theme';
 import { categoryMeta } from '../categories';
-import { byCategory, byMonth, filterReceipts, findIssues, money, rangeFor, sum } from '../utils';
+import { byCategory, byMonth, filterReceipts, findIssues, money, sum, toISO } from '../utils';
 
-const PERIODS = [
-  { key: 'this_month', label: 'This month' },
-  { key: 'last_month', label: 'Last month' },
-  { key: 'this_quarter', label: 'Quarter' },
-  { key: 'this_year', label: 'Year' },
-];
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const MONTHS_LONG = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+// Period = one month of a year, or the whole year.
+function periodRange({ mode, year, month }) {
+  if (mode === 'year') return { from: `${year}-01-01`, to: `${year}-12-31` };
+  return { from: toISO(new Date(year, month, 1)), to: toISO(new Date(year, month + 1, 0)) };
+}
 
 export default function HomeScreen({ nav }) {
   const { receipts, settings } = useStore();
-  const [period, setPeriod] = useState('this_month');
+  const now = new Date();
+  const [period, setPeriod] = useState({ mode: 'month', year: now.getFullYear(), month: now.getMonth() });
+  const [picker, setPicker] = useState(false);
+  const [pickerYear, setPickerYear] = useState(period.year);
+  const periodLabel = period.mode === 'year' ? `${period.year}` : `${MONTHS_LONG[period.month]} ${period.year}`;
   const cur = settings.currency;
 
   const { list, cats, months, issues } = useMemo(() => {
-    const r = rangeFor(period);
+    const r = periodRange(period);
     const list = filterReceipts(receipts, r);
     return { list, cats: byCategory(list), months: byMonth(receipts, 6), issues: findIssues(receipts).filter((i) => i.type !== 'no_image') };
   }, [receipts, period]);
@@ -33,12 +39,20 @@ export default function HomeScreen({ nav }) {
     <ScrollView contentContainerStyle={{ paddingBottom: 32 }}>
       <Header title={settings.name ? `Hi, ${settings.name.split(' ')[0]}` : 'Expenses'} subtitle="Track spending, stay tax-ready" />
       <View style={{ paddingHorizontal: 16 }}>
-        <ChipRow>
-          {PERIODS.map((p) => <Chip key={p.key} label={p.label} active={period === p.key} onPress={() => setPeriod(p.key)} />)}
-        </ChipRow>
+        <View style={{ flexDirection: 'row', gap: 8, paddingVertical: 4 }}>
+          <Chip
+            label={`📅  ${MONTHS[period.month]} ${period.year}  ▾`}
+            active={period.mode === 'month'}
+            onPress={() => {
+              setPickerYear(period.year);
+              setPicker(true);
+            }}
+          />
+          <Chip label={`Whole year ${period.year}`} active={period.mode === 'year'} onPress={() => setPeriod((p) => ({ ...p, mode: 'year' }))} />
+        </View>
 
         <Card style={{ marginTop: 12 }}>
-          <Text style={s.sub}>Total spent</Text>
+          <Text style={s.sub}>Total spent · {periodLabel}</Text>
           <Text style={{ color: colors.text, fontSize: 34, fontWeight: '800', marginTop: 2 }}>{money(total, cur)}</Text>
           <View style={{ flexDirection: 'row', gap: 10, marginTop: 14 }}>
             <Stat label="Tax paid" value={money(sum(list, 'tax'), cur)} />
@@ -100,6 +114,44 @@ export default function HomeScreen({ nav }) {
         {list.slice(0, 5).map((r) => <ReceiptRow key={r.id} r={r} onPress={() => nav.push('receipt', { id: r.id })} />)}
         {list.length === 0 && <Button title="Scan your first receipt" icon="📷" onPress={() => nav.tab('scan')} />}
       </View>
+
+      <Modal visible={picker} transparent animationType="fade" onRequestClose={() => setPicker(false)}>
+        <Pressable style={{ flex: 1, backgroundColor: '#0008', justifyContent: 'center', padding: 24 }} onPress={() => setPicker(false)}>
+          <Pressable style={{ backgroundColor: colors.surface, borderRadius: radius.lg, padding: 16 }} onPress={() => {}}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+              <Text style={{ color: colors.accentInk, fontSize: 26, paddingHorizontal: 12 }} onPress={() => setPickerYear((y) => y - 1)}>‹</Text>
+              <Text style={s.h2}>{pickerYear}</Text>
+              <Text style={{ color: colors.accentInk, fontSize: 26, paddingHorizontal: 12 }} onPress={() => setPickerYear((y) => y + 1)}>›</Text>
+            </View>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+              {MONTHS.map((m, i) => {
+                const active = period.mode === 'month' && period.year === pickerYear && period.month === i;
+                const isNow = pickerYear === now.getFullYear() && i === now.getMonth();
+                return (
+                  <Pressable
+                    key={m}
+                    onPress={() => {
+                      setPeriod({ mode: 'month', year: pickerYear, month: i });
+                      setPicker(false);
+                    }}
+                    style={{
+                      width: '31%',
+                      paddingVertical: 12,
+                      borderRadius: radius.md,
+                      alignItems: 'center',
+                      backgroundColor: active ? colors.accent : colors.surface2,
+                      borderWidth: 1,
+                      borderColor: isNow && !active ? colors.accent : 'transparent',
+                    }}
+                  >
+                    <Text style={{ color: active ? colors.accentText : colors.text, fontWeight: '700' }}>{m}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </ScrollView>
   );
 }
