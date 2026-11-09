@@ -48,7 +48,7 @@ export default function HomeScreen({ nav }) {
               setPicker(true);
             }}
           />
-          <Chip label={`Whole year ${period.year}`} active={period.mode === 'year'} onPress={() => setPeriod((p) => ({ ...p, mode: 'year' }))} />
+          <Chip label="This year" active={period.mode === 'year'} onPress={() => setPeriod((p) => ({ ...p, mode: 'year', year: now.getFullYear() }))} />
         </View>
 
         <Card style={{ marginTop: 12 }}>
