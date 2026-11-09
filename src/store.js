@@ -3,7 +3,7 @@ import React, { createContext, useContext, useEffect, useMemo, useRef, useState 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system/legacy';
 import { uid, toISO } from './utils';
-import { autoCategorize } from './categories';
+import { autoCategorize, migrateCategory } from './categories';
 import { webSample, hasKey } from './ai';
 import { isWeb } from './platform';
 
@@ -51,13 +51,13 @@ function demoReceipts() {
     mk('Petronas Klang', 3, 120, 0, { paymentMethod: 'Debit card' }),
     mk('Grab', 4, 18.5, 0, { tags: ['client'] }),
     mk('Popular Bookstore', 6, 56.9, 3.22, { lineItems: [{ description: 'A4 paper 500s', qty: 2, amount: 31.8 }, { description: 'Pens', qty: 1, amount: 21.88 }] }),
-    mk('Adobe Systems', 9, 105.0, 5.94, { category: 'Software', tags: ['subscription'] }),
+    mk('Adobe Systems', 9, 105.0, 5.94, { tags: ['subscription'] }),
     mk('Unifi', 12, 139.0, 7.87, { tags: ['monthly'] }),
     mk('AirAsia', 20, 389.0, 0, { tags: ['penang-trip'] }),
-    mk('Hotel Jen Penang', 19, 452.0, 25.58, { category: 'Travel', tags: ['penang-trip'] }),
-    mk('Kedai Runcit Ah Seng', 22, 47.2, 0, { category: 'Other', status: 'needs_review' }),
+    mk('Hotel Jen Penang', 19, 452.0, 25.58, { tags: ['penang-trip'] }),
+    mk('Kedai Runcit Ah Seng', 22, 47.2, 0, { category: 'Others', status: 'needs_review' }),
     mk('Starbucks Pavilion KL', 1, 32.4, 1.83, { tags: ['client'] }), // intentional duplicate
-    mk('Meta Ads', 35, 300.0, 0, { category: 'Marketing' }),
+    mk('Meta Ads', 35, 300.0, 0),
     mk('Mr DIY', 40, 23.6, 1.34),
     mk('AEON Bukit Tinggi', 45, 210.35, 0),
   ];
@@ -83,7 +83,7 @@ export function StoreProvider({ children }) {
         const raw = await AsyncStorage.getItem(KEY);
         if (raw) {
           const s = JSON.parse(raw);
-          setReceipts(s.receipts || []);
+          setReceipts((s.receipts || []).map((r) => ({ ...r, category: migrateCategory(r) })));
           setReports(s.reports || []);
           setSettings({ ...DEFAULT_SETTINGS, ...(s.settings || {}) });
         } else {

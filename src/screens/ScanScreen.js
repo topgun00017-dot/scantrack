@@ -20,7 +20,7 @@ export default function ScanScreen({ nav }) {
     const parts = dataUrlParts(asset.uri);
     if (parts && !asset.base64) asset = { ...asset, base64: parts.base64, mimeType: parts.mime };
     if (!hasAI || !asset.base64) {
-      return { imageUri, merchant: '', date: today(), total: 0, tax: 0, subtotal: 0, category: 'Other', lineItems: [], status: 'needs_review' };
+      return { imageUri, merchant: '', date: today(), total: 0, tax: 0, subtotal: 0, category: 'Others', lineItems: [], status: 'needs_review' };
     }
     const data = await extractReceipt(settings, asset.base64, asset.mimeType || 'image/jpeg');
     return { imageUri, ...data };
@@ -38,7 +38,7 @@ export default function ScanScreen({ nav }) {
       nav.push('receipt', { draft });
     } catch (e) {
       showAlert('Could not read receipt', `${e.message}\n\nYou can enter the details manually.`);
-      nav.push('receipt', { draft: { imageUri: await persistImage(asset.uri), date: today(), total: 0, tax: 0, lineItems: [], category: 'Other', status: 'needs_review' } });
+      nav.push('receipt', { draft: { imageUri: await persistImage(asset.uri), date: today(), total: 0, tax: 0, lineItems: [], category: 'Others', status: 'needs_review' } });
     } finally {
       setBusy(null);
     }
@@ -71,7 +71,7 @@ export default function ScanScreen({ nav }) {
         d.status === 'needs_review' ? review++ : ok++;
       } catch (e) {
         review++;
-        addReceipt({ imageUri: await persistImage(asset.uri), merchant: 'Unreadable receipt', date: today(), total: 0, tax: 0, category: 'Other', status: 'needs_review' });
+        addReceipt({ imageUri: await persistImage(asset.uri), merchant: 'Unreadable receipt', date: today(), total: 0, tax: 0, category: 'Others', status: 'needs_review' });
       }
     }
     setBusy(null);
@@ -100,7 +100,7 @@ export default function ScanScreen({ nav }) {
           </Text>
           <Button title="Take photo" icon="📷" onPress={fromCamera} style={{ alignSelf: 'stretch' }} />
           <Button title="Upload from gallery (up to 10)" icon="🖼️" variant="secondary" onPress={fromLibrary} style={{ alignSelf: 'stretch', marginTop: 10 }} />
-          <Button title="Enter manually" variant="ghost" onPress={() => nav.push('receipt', { draft: { date: today(), total: 0, tax: 0, lineItems: [], category: 'Other' } })} style={{ marginTop: 6 }} />
+          <Button title="Enter manually" variant="ghost" onPress={() => nav.push('receipt', { draft: { date: today(), total: 0, tax: 0, lineItems: [], category: 'Others' } })} style={{ marginTop: 6 }} />
         </Card>
 
         {!hasAI && (

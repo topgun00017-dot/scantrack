@@ -26,7 +26,7 @@ export default function ReceiptEditScreen({ nav, params }) {
     tax: src.tax ? String(src.tax) : '',
     paymentMethod: src.paymentMethod || '',
     notes: src.notes || '',
-    category: src.category || 'Other',
+    category: src.category || 'Others',
     tags: src.tags || [],
     currency: src.currency || settings.currency,
     lineItems: (src.lineItems || []).map((i) => ({ ...i, amount: String(i.amount ?? ''), qty: String(i.qty ?? 1) })),
@@ -116,7 +116,7 @@ export default function ReceiptEditScreen({ nav, params }) {
         )}
 
         <SectionTitle>Details</SectionTitle>
-        <Field label="Merchant" value={f.merchant} onChangeText={(v) => { set('merchant')(v); if (isNew && f.category === 'Other') set('category')(autoCategorize(v)); }} placeholder="e.g. Petronas Klang" />
+        <Field label="Merchant" value={f.merchant} onChangeText={(v) => { set('merchant')(v); if (isNew && f.category === 'Others') set('category')(autoCategorize(v)); }} placeholder="e.g. Petronas Klang" />
         <View style={{ flexDirection: 'row', gap: 10 }}>
           <Field style={{ flex: 1 }} label="Date (YYYY-MM-DD)" value={f.date} onChangeText={set('date')} placeholder="2026-11-05" />
           <Field style={{ width: 90 }} label="Currency" value={f.currency} onChangeText={(v) => set('currency')(v.toUpperCase())} autoCapitalize="characters" maxLength={3} />

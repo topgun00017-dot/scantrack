@@ -106,7 +106,7 @@ export function findIssues(receipts) {
   const seen = {};
   receipts.forEach((r) => {
     if (r.status === 'needs_review') issues.push({ type: 'needs_review', id: r.id, label: 'Needs review', receipt: r });
-    if (!r.category || r.category === 'Other') issues.push({ type: 'uncategorized', id: r.id, label: 'Uncategorised', receipt: r });
+    if (!r.category || r.category === 'Others') issues.push({ type: 'uncategorized', id: r.id, label: 'Uncategorised', receipt: r });
     if (!r.total || r.total <= 0) issues.push({ type: 'no_total', id: r.id, label: 'Missing total', receipt: r });
     if (!r.imageUri) issues.push({ type: 'no_image', id: r.id, label: 'No receipt image', receipt: r });
     const key = `${(r.merchant || '').toLowerCase().trim()}|${r.date}|${Number(r.total).toFixed(2)}`;

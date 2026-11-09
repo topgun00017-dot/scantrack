@@ -2,7 +2,7 @@
 // NOTE: calling the API straight from the phone with a key stored on-device is fine
 // for testing in Expo Go. For a production release, route these calls through your
 // own backend so the key never ships inside the app.
-import { CATEGORY_KEYS, normalizeCategory } from './categories';
+import { CATEGORY_KEYS, CATEGORY_GUIDE, normalizeCategory } from './categories';
 import { today } from './utils';
 import { isWeb, capability, base64ToBlob } from './platform';
 
@@ -94,7 +94,9 @@ export async function extractReceipt(settings, base64, mimeType = 'image/jpeg') 
   "line_items": [{"description": string, "qty": number, "amount": number}],
   "confidence": "high" | "low"
 }
-Capture every line item. Amounts are plain numbers without currency symbols.`;
+Capture every line item. Amounts are plain numbers without currency symbols.
+Choose "category" from this Malaysian small-business chart of accounts:
+${CATEGORY_GUIDE}`;
 
   let d;
   const sample = await webSample();
