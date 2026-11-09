@@ -62,7 +62,7 @@ export default function HomeScreen({ nav }) {
                   style={{
                     width: '70%',
                     height: Math.max(4, (m.total / maxMonth) * 96),
-                    backgroundColor: i === months.length - 1 ? colors.accent : colors.surface2,
+                    backgroundColor: i === months.length - 1 ? colors.accent : colors.bar,
                     borderRadius: 6,
                   }}
                 />
@@ -96,7 +96,7 @@ export default function HomeScreen({ nav }) {
           <Button title="Export" icon="⬇️" variant="secondary" style={{ flex: 1 }} onPress={() => nav.push('export')} />
         </View>
 
-        <SectionTitle right={<Text style={{ color: colors.accent }} onPress={() => nav.tab('receipts')}>See all</Text>}>Recent</SectionTitle>
+        <SectionTitle right={<Text style={{ color: colors.accentInk, fontWeight: '700' }} onPress={() => nav.tab('receipts')}>See all</Text>}>Recent</SectionTitle>
         {list.slice(0, 5).map((r) => <ReceiptRow key={r.id} r={r} onPress={() => nav.push('receipt', { id: r.id })} />)}
         {list.length === 0 && <Button title="Scan your first receipt" icon="📷" onPress={() => nav.tab('scan')} />}
       </View>

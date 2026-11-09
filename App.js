@@ -83,7 +83,7 @@ function Shell() {
             return (
               <Pressable key={t.key} onPress={() => nav.tab(t.key)} style={styles.tab}>
                 <Text style={{ fontSize: 20, opacity: active ? 1 : 0.55 }}>{t.icon}</Text>
-                <Text style={[styles.tabLabel, active && { color: colors.accent }]}>{t.label}</Text>
+                <Text style={[styles.tabLabel, active && { color: colors.accentInk }]}>{t.label}</Text>
               </Pressable>
             );
           })}
@@ -97,7 +97,7 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <StoreProvider>
-        <StatusBar style="light" />
+        <StatusBar style="dark" />
         <Shell />
         <DialogHost />
       </StoreProvider>

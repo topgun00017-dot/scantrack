@@ -71,7 +71,7 @@ export default function ExportScreen({ nav, params }) {
               <Text style={[s.body, { fontWeight: '700' }]}>{f.title}</Text>
               <Text style={s.sub}>{f.text}</Text>
             </View>
-            <Text style={{ color: format === f.key ? colors.accent : colors.faint, fontSize: 20 }}>{format === f.key ? '●' : '○'}</Text>
+            <Text style={{ color: format === f.key ? colors.accentInk : colors.faint, fontSize: 20 }}>{format === f.key ? '●' : '○'}</Text>
           </Pressable>
         ))}
       </ScrollView>

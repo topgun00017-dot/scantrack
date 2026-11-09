@@ -33,7 +33,7 @@ export function Button({ title, onPress, variant = 'primary', icon, loading, dis
     primary: { bg: colors.accent, fg: colors.accentText },
     secondary: { bg: colors.surface2, fg: colors.text },
     danger: { bg: 'transparent', fg: colors.danger, border: colors.danger },
-    ghost: { bg: 'transparent', fg: colors.accent },
+    ghost: { bg: 'transparent', fg: colors.accentInk },
   }[variant];
   return (
     <Pressable
@@ -110,7 +110,7 @@ export function ReceiptRow({ r, onPress, selected, onLongPress }) {
       <View style={{ alignItems: 'flex-end' }}>
         <Text style={s.rowAmt}>{money(r.total, r.currency)}</Text>
         {r.status === 'needs_review' && <Text style={s.badge}>Review</Text>}
-        {selected && <Text style={{ color: colors.accent, fontSize: 12 }}>✓ selected</Text>}
+        {selected && <Text style={{ color: colors.accentInk, fontSize: 12 }}>✓ selected</Text>}
       </View>
     </Pressable>
   );

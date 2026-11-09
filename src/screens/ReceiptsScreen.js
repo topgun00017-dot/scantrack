@@ -45,7 +45,7 @@ export default function ReceiptsScreen({ nav }) {
       <Header
         title="Receipts"
         subtitle={`${list.length} shown · ${money(sum(list), settings.currency)}`}
-        right={selecting ? <Text style={{ color: colors.accent, fontWeight: '700' }} onPress={() => setSelected([])}>Cancel</Text> : <Text style={{ color: colors.accent, fontWeight: '700' }} onPress={() => setSelected(list.map((r) => r.id))}>Select</Text>}
+        right={selecting ? <Text style={{ color: colors.accentInk, fontWeight: '700' }} onPress={() => setSelected([])}>Cancel</Text> : <Text style={{ color: colors.accentInk, fontWeight: '700' }} onPress={() => setSelected(list.map((r) => r.id))}>Select</Text>}
       />
       <View style={{ paddingHorizontal: 16 }}>
         <TextInput
@@ -56,7 +56,7 @@ export default function ReceiptsScreen({ nav }) {
           style={s.input}
         />
         <ChipRow>
-          <Chip label="Needs review" active={onlyReview} onPress={() => setOnlyReview(!onlyReview)} color={colors.warning} />
+          <Chip label="Needs review" active={onlyReview} onPress={() => setOnlyReview(!onlyReview)} color={colors.accent} />
           {CATEGORIES.map((c) => (
             <Chip key={c.key} label={`${c.icon} ${c.key}`} active={category === c.key} onPress={() => setCategory(category === c.key ? null : c.key)} />
           ))}
