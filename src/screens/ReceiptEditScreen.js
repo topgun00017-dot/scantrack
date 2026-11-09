@@ -6,7 +6,7 @@ import { useStore } from '../store';
 import { Button, Card, Chip, Field, Header, SectionTitle, s } from '../components';
 import { colors } from '../theme';
 import { CATEGORIES, autoCategorize } from '../categories';
-import { money } from '../utils';
+import { findDuplicate, money, prettyDate } from '../utils';
 
 const num = (v) => {
   const n = parseFloat(String(v).replace(/,/g, ''));
@@ -38,7 +38,7 @@ export default function ReceiptEditScreen({ nav, params }) {
 
   const itemsTotal = f.lineItems.reduce((acc, i) => acc + num(i.amount), 0);
   const dup = useMemo(
-    () => receipts.find((r) => r.id !== existing?.id && r.merchant?.toLowerCase().trim() === f.merchant.toLowerCase().trim() && r.date === f.date && Math.abs(r.total - num(f.total)) < 0.01),
+    () => findDuplicate(receipts, { merchant: f.merchant, date: f.date, total: num(f.total), confirmedUnique: existing?.confirmedUnique }, existing?.id),
     [receipts, f.merchant, f.date, f.total]
   );
 
@@ -72,9 +72,25 @@ export default function ReceiptEditScreen({ nav, params }) {
       status: total > 0 ? 'processed' : 'needs_review',
       imageUri: src.imageUri || null,
     };
-    if (isNew) addReceipt(rec);
-    else updateReceipt(existing.id, rec);
-    nav.back();
+    const commit = (r) => {
+      if (isNew) addReceipt(r);
+      else updateReceipt(existing.id, r);
+      nav.back();
+    };
+    // Same date and amount at a similar-named shop: ask before saving a second copy.
+    const twin = findDuplicate(receipts, { ...rec, confirmedUnique: existing?.confirmedUnique }, existing?.id);
+    if (!twin) return commit(rec);
+    showAlert(
+      'Possible duplicate',
+      `You already have ${twin.merchant} on ${prettyDate(twin.date)} for ${money(twin.total, twin.currency)}.\n\nIs this a different purchase?`,
+      [
+        isNew
+          ? { text: "Don't save", style: 'destructive', onPress: () => nav.back() }
+          : { text: 'Delete this copy', style: 'destructive', onPress: () => { deleteReceipt(existing.id); nav.back(); } },
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Not a duplicate', onPress: () => commit({ ...rec, confirmedUnique: true }) },
+      ]
+    );
   };
 
   const remove = () =>
@@ -111,7 +127,7 @@ export default function ReceiptEditScreen({ nav, params }) {
         {dup && (
           <Card style={{ marginTop: 12, borderColor: colors.danger }}>
             <Text style={[s.body, { fontWeight: '700' }]}>Possible duplicate</Text>
-            <Text style={[s.sub, { marginTop: 4 }]}>A receipt from {dup.merchant} on {dup.date} for {money(dup.total, dup.currency)} already exists.</Text>
+            <Text style={[s.sub, { marginTop: 4 }]}>A receipt from {dup.merchant} on {prettyDate(dup.date)} for {money(dup.total, dup.currency)} already exists. You'll be asked to confirm when you save.</Text>
           </Card>
         )}
 

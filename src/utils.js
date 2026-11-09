@@ -102,19 +102,51 @@ export function allTags(receipts) {
   return [...s].sort();
 }
 
+// ---------- duplicate detection ----------
+// Shop names read from receipts vary ("Boulevard Hypermarket (Kuching) Sdn Bhd" vs
+// "BOULEVARD HYPERMARKET"), so names are compared loosely; date and total must match.
+const normMerchant = (s) =>
+  String(s || '')
+    .toLowerCase()
+    .replace(/\(.*?\)/g, '')
+    .replace(/\b(sdn\.?\s*bhd\.?|bhd|enterprise|trading|plt|malaysia)\b/g, '')
+    .replace(/[^a-z0-9]/g, '');
+
+export function sameMerchant(a, b) {
+  const x = normMerchant(a);
+  const y = normMerchant(b);
+  if (!x || !y) return true;
+  return x === y || x.includes(y) || y.includes(x) || (x.length >= 6 && y.length >= 6 && x.slice(0, 6) === y.slice(0, 6));
+}
+
+export function isLikelyDuplicate(a, b) {
+  const ta = Number(a.total) || 0;
+  const tb = Number(b.total) || 0;
+  return ta > 0 && a.date === b.date && Math.abs(ta - tb) < 0.01 && sameMerchant(a.merchant, b.merchant);
+}
+
+// An existing receipt that `r` looks like a copy of. Receipts the user has already
+// confirmed as separate purchases are left out, so a resolved pair is not asked about again.
+export function findDuplicate(receipts, r, excludeId) {
+  if (r.confirmedUnique) return null;
+  return receipts.find((x) => x.id !== excludeId && !x.confirmedUnique && isLikelyDuplicate(x, r)) || null;
+}
+
 // Data-quality checks used by Prepare-for-accounting and the assistant's "reconcile".
 export function findIssues(receipts) {
   const issues = [];
-  const seen = {};
+  const kept = [];
   receipts.forEach((r) => {
     if (r.status === 'needs_review') issues.push({ type: 'needs_review', id: r.id, label: 'Needs review', receipt: r });
     // "Others" is a valid choice; only a missing or unknown category is flagged.
     if (!CATEGORY_KEYS.includes(r.category)) issues.push({ type: 'uncategorized', id: r.id, label: 'Uncategorised', receipt: r });
     if (!r.total || r.total <= 0) issues.push({ type: 'no_total', id: r.id, label: 'Missing total', receipt: r });
     if (!r.imageUri) issues.push({ type: 'no_image', id: r.id, label: 'No receipt image', receipt: r });
-    const key = `${(r.merchant || '').toLowerCase().trim()}|${r.date}|${Number(r.total).toFixed(2)}`;
-    if (seen[key] && !r.confirmedUnique) issues.push({ type: 'duplicate', id: r.id, otherId: seen[key], label: 'Possible duplicate', receipt: r });
-    else seen[key] = r.id;
+    if (!r.confirmedUnique) {
+      const other = kept.find((k) => isLikelyDuplicate(k, r));
+      if (other) issues.push({ type: 'duplicate', id: r.id, otherId: other.id, label: 'Possible duplicate', receipt: r });
+      else kept.push(r);
+    }
   });
   // Most important first; missing images are a soft warning so they go last.
   const order = ['duplicate', 'needs_review', 'no_total', 'uncategorized', 'no_image'];

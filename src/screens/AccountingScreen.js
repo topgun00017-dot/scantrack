@@ -50,7 +50,7 @@ export default function AccountingScreen({ nav }) {
 
   const quickFix = (i) => {
     if (i.type === 'duplicate') {
-      return showAlert('Possible duplicate', `${i.receipt.merchant}, ${prettyDate(i.receipt.date)}, ${money(i.receipt.total, i.receipt.currency)}`, [
+      return showAlert('Possible duplicate', `${i.receipt.merchant}, ${prettyDate(i.receipt.date)}, ${money(i.receipt.total, i.receipt.currency)} looks like another receipt you saved.\n\nIs this a different purchase?`, [
         { text: 'Cancel', style: 'cancel' },
         { text: 'Not a duplicate', onPress: () => updateReceipt(i.id, { confirmedUnique: true }) },
         { text: 'Delete this copy', style: 'destructive', onPress: () => deleteReceipt(i.id) },

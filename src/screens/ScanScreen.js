@@ -7,10 +7,10 @@ import { useStore } from '../store';
 import { extractReceipt } from '../ai';
 import { Button, Card, Header, s } from '../components';
 import { colors } from '../theme';
-import { today } from '../utils';
+import { findDuplicate, today } from '../utils';
 
 export default function ScanScreen({ nav }) {
-  const { settings, persistImage, addReceipt, aiReady } = useStore();
+  const { settings, persistImage, addReceipt, aiReady, receipts } = useStore();
   const [busy, setBusy] = useState(null); // { uri, label }
   const hasAI = aiReady;
 
@@ -61,13 +61,17 @@ export default function ScanScreen({ nav }) {
     }
     // Batch: process each and save straight into the archive.
     let ok = 0;
+    let dups = 0;
+    const known = [...receipts];
     let review = 0;
     for (let i = 0; i < res.assets.length; i++) {
       const asset = res.assets[i];
       setBusy({ uri: asset.uri, label: `Processing ${i + 1} of ${res.assets.length}…` });
       try {
         const d = await process(asset);
-        addReceipt({ ...d, merchant: d.merchant || 'Unknown merchant' });
+        const rec = { ...d, merchant: d.merchant || 'Unknown merchant' };
+        if (findDuplicate(known, rec)) dups++;
+        known.push(addReceipt(rec));
         d.status === 'needs_review' ? review++ : ok++;
       } catch (e) {
         review++;
@@ -75,7 +79,12 @@ export default function ScanScreen({ nav }) {
       }
     }
     setBusy(null);
-    showAlert('Batch done', `${ok} processed${review ? `, ${review} need review` : ''}.`, [{ text: 'View receipts', onPress: () => nav.tab('receipts') }]);
+    showAlert(
+      'Batch done',
+      `${ok} processed${review ? `, ${review} need review` : ''}.` +
+        (dups ? `\n\n${dups} look like receipts you already have. Check them under More → Prepare for accounting.` : ''),
+      [{ text: 'View receipts', onPress: () => nav.tab('receipts') }]
+    );
   };
 
   if (busy) {
