@@ -1,11 +1,12 @@
 // App-wide state: receipts, expense reports and settings, persisted with AsyncStorage.
-import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system/legacy';
 import { uid, toISO } from './utils';
 import { autoCategorize, migrateCategory } from './categories';
 import { webSample, hasKey } from './ai';
 import { isWeb } from './platform';
+import * as Drive from './drive';
 
 const KEY = 'scantrack:v1';
 
@@ -17,6 +18,8 @@ const DEFAULT_SETTINGS = {
   accountantEmail: '',
   provider: 'claude', // 'claude' | 'openai'
   apiKey: '',
+  driveEnabled: false, // auto-save receipts to Google Drive
+  driveEmail: '',
   openaiKey: '',
   openaiModel: 'gpt-5.4-mini',
   model: 'claude-sonnet-5-5',
@@ -71,6 +74,8 @@ export function StoreProvider({ children }) {
   const [reports, setReports] = useState([]);
   const [settings, setSettings] = useState(DEFAULT_SETTINGS);
   const [webAI, setWebAI] = useState(false);
+  const [driveTrash, setDriveTrash] = useState([]); // Drive file ids of deleted receipts, to move to the Drive bin
+  const [driveStatus, setDriveStatus] = useState({ syncing: false, lastSync: null, error: null });
   const loaded = useRef(false);
 
   useEffect(() => {
@@ -85,6 +90,7 @@ export function StoreProvider({ children }) {
           const s = JSON.parse(raw);
           setReceipts((s.receipts || []).map((r) => ({ ...r, category: migrateCategory(r) })));
           setReports(s.reports || []);
+          setDriveTrash(s.driveTrash || []);
           setSettings({ ...DEFAULT_SETTINGS, ...(s.settings || {}) });
         } else {
           setReceipts(demoReceipts());
@@ -99,8 +105,73 @@ export function StoreProvider({ children }) {
 
   useEffect(() => {
     if (!loaded.current) return;
-    AsyncStorage.setItem(KEY, JSON.stringify({ receipts, reports, settings })).catch(() => {});
-  }, [receipts, reports, settings]);
+    AsyncStorage.setItem(KEY, JSON.stringify({ receipts, reports, settings, driveTrash })).catch(() => {});
+  }, [receipts, reports, settings, driveTrash]);
+
+  // ---------- Google Drive auto-save ----------
+  // Every add/edit sets driveDirty and bumps _rev; the sync uploads dirty receipts and clears the
+  // flag only if the receipt wasn't edited again while uploading.
+  const latest = useRef({});
+  latest.current = { receipts, settings, driveTrash };
+  const syncing = useRef(false);
+  const forceSheet = useRef(false);
+
+  const runSync = useCallback(async () => {
+    const { receipts: list, settings: st, driveTrash: trash } = latest.current;
+    if (!st.driveEnabled || !Drive.driveAvailable() || syncing.current) return;
+    const dirty = list.filter((r) => !r.demo && r.driveDirty);
+    if (!dirty.length && !trash.length && !forceSheet.current) return;
+    syncing.current = true;
+    forceSheet.current = false;
+    setDriveStatus((d) => ({ ...d, syncing: true, error: null }));
+    let ok = false;
+    try {
+      for (const r of dirty) {
+        const fields = await Drive.syncReceipt(r);
+        setReceipts((cur) => cur.map((x) => (x.id !== r.id ? x : { ...x, ...fields, driveDirty: x._rev === r._rev ? false : x.driveDirty })));
+      }
+      for (const id of trash) {
+        await Drive.trashFile(id);
+        setDriveTrash((t) => t.filter((x) => x !== id));
+      }
+      await Drive.updateSheet(latest.current.receipts.filter((r) => !r.demo));
+      setDriveStatus({ syncing: false, lastSync: Date.now(), error: null });
+      ok = true;
+    } catch (e) {
+      setDriveStatus((d) => ({ ...d, syncing: false, error: e.message || 'Google Drive sync failed.' }));
+    } finally {
+      syncing.current = false;
+    }
+    // Pick up anything saved while this sync was running.
+    if (ok && latest.current.receipts.some((r) => !r.demo && r.driveDirty)) setTimeout(() => runSync(), 1500);
+  }, []);
+
+  useEffect(() => {
+    if (!ready || !settings.driveEnabled) return;
+    const t = setTimeout(() => runSync(), 2500);
+    return () => clearTimeout(t);
+  }, [ready, receipts, driveTrash, settings.driveEnabled, runSync]);
+
+  const connectDrive = useCallback(async () => {
+    const who = await Drive.signIn();
+    if (!who) return null;
+    // Back up receipts saved before Drive was connected.
+    setReceipts((list) => list.map((r) => (r.demo || r.driveFileId ? r : { ...r, driveDirty: true, _rev: (r._rev || 0) + 1 })));
+    forceSheet.current = true;
+    setSettings((s) => ({ ...s, driveEnabled: true, driveEmail: who.email }));
+    return who;
+  }, []);
+
+  const disconnectDrive = useCallback(async () => {
+    await Drive.signOut();
+    setSettings((s) => ({ ...s, driveEnabled: false, driveEmail: '' }));
+    setDriveStatus({ syncing: false, lastSync: null, error: null });
+  }, []);
+
+  const syncNow = useCallback(() => {
+    forceSheet.current = true;
+    return runSync();
+  }, [runSync]);
 
   const api = useMemo(() => {
     // Copy a picked/captured image into permanent app storage.
@@ -130,21 +201,25 @@ export function StoreProvider({ children }) {
           currency: settings.currency,
           status: 'processed',
           ...r,
+          driveDirty: true,
+          _rev: 1,
         };
         setReceipts((list) => [rec, ...list]);
         return rec;
       },
       updateReceipt: (id, patch) =>
-        setReceipts((list) => list.map((r) => (r.id === id ? { ...r, ...(typeof patch === 'function' ? patch(r) : patch) } : r))),
-      updateMany: (ids, patchFn) => setReceipts((list) => list.map((r) => (ids.includes(r.id) ? { ...r, ...patchFn(r) } : r))),
+        setReceipts((list) =>
+          list.map((r) => (r.id === id ? { ...r, ...(typeof patch === 'function' ? patch(r) : patch), driveDirty: true, _rev: (r._rev || 0) + 1 } : r))
+        ),
+      updateMany: (ids, patchFn) =>
+        setReceipts((list) => list.map((r) => (ids.includes(r.id) ? { ...r, ...patchFn(r), driveDirty: true, _rev: (r._rev || 0) + 1 } : r))),
       deleteReceipt: (id) => {
-        setReceipts((list) => {
-          const r = list.find((x) => x.id === id);
-          if (r?.imageUri?.startsWith(FileSystem.documentDirectory || '__none__')) {
-            FileSystem.deleteAsync(r.imageUri, { idempotent: true }).catch(() => {});
-          }
-          return list.filter((x) => x.id !== id);
-        });
+        const r = latest.current.receipts.find((x) => x.id === id);
+        if (r?.driveFileId) setDriveTrash((t) => (t.includes(r.driveFileId) ? t : [...t, r.driveFileId]));
+        if (r?.imageUri?.startsWith(FileSystem.documentDirectory || '__none__')) {
+          FileSystem.deleteAsync(r.imageUri, { idempotent: true }).catch(() => {});
+        }
+        setReceipts((list) => list.filter((x) => x.id !== id));
         setReports((rs) => rs.map((rep) => ({ ...rep, receiptIds: rep.receiptIds.filter((x) => x !== id) })));
       },
       clearDemo: () => setReceipts((list) => list.filter((r) => !r.demo)),
@@ -160,7 +235,9 @@ export function StoreProvider({ children }) {
   }, [settings.currency]);
 
   const aiReady = webAI || hasKey(settings);
-  const value = { ready, receipts, reports, settings, aiReady, webAI, ...api };
+  const driveWaiting = settings.driveEnabled ? receipts.filter((r) => !r.demo && r.driveDirty).length : 0;
+  const drive = { available: Drive.driveAvailable(), status: driveStatus, waiting: driveWaiting, connect: connectDrive, disconnect: disconnectDrive, syncNow };
+  const value = { ready, receipts, reports, settings, aiReady, webAI, drive, ...api };
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 
