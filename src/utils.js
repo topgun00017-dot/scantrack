@@ -1,3 +1,5 @@
+import { CATEGORY_KEYS } from './categories';
+
 // Shared helpers: ids, dates, money, filtering, summaries and data-quality checks.
 
 export const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
@@ -106,7 +108,8 @@ export function findIssues(receipts) {
   const seen = {};
   receipts.forEach((r) => {
     if (r.status === 'needs_review') issues.push({ type: 'needs_review', id: r.id, label: 'Needs review', receipt: r });
-    if (!r.category || r.category === 'Others') issues.push({ type: 'uncategorized', id: r.id, label: 'Uncategorised', receipt: r });
+    // "Others" is a valid choice; only a missing or unknown category is flagged.
+    if (!CATEGORY_KEYS.includes(r.category)) issues.push({ type: 'uncategorized', id: r.id, label: 'Uncategorised', receipt: r });
     if (!r.total || r.total <= 0) issues.push({ type: 'no_total', id: r.id, label: 'Missing total', receipt: r });
     if (!r.imageUri) issues.push({ type: 'no_image', id: r.id, label: 'No receipt image', receipt: r });
     const key = `${(r.merchant || '').toLowerCase().trim()}|${r.date}|${Number(r.total).toFixed(2)}`;
