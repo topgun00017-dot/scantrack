@@ -1,4 +1,5 @@
 // Track expenses: spending auto-categorised, monthly trend, tax-time readiness.
+import { Icon } from '../icons';
 import React, { useMemo, useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { useStore } from '../store';
@@ -41,7 +42,7 @@ export default function HomeScreen({ nav }) {
 
         {issues.length > 0 && (
           <Card style={{ marginTop: 12, borderColor: colors.warning }} onPress={() => nav.push('accounting')}>
-            <Text style={[s.body, { fontWeight: '700' }]}>⚠️  {issues.length} item{issues.length > 1 ? 's' : ''} to tidy before tax time</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}><Icon name="alert" size={18} color={colors.warning} /><Text style={[s.body, { fontWeight: '700' }]}>{issues.length} item{issues.length > 1 ? 's' : ''} to tidy before tax time</Text></View>
             <Text style={[s.sub, { marginTop: 4 }]}>Duplicates, uncategorised or unreviewed receipts. Tap to fix.</Text>
           </Card>
         )}
@@ -73,7 +74,7 @@ export default function HomeScreen({ nav }) {
             return (
               <View key={c.category} style={{ marginBottom: 12 }}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                  <Text style={s.body}>{meta.icon}  {c.category} <Text style={s.sub}>· {c.count}</Text></Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}><Icon name={meta.icon} size={18} color={meta.color} /><Text style={s.body}>{c.category} <Text style={s.sub}>· {c.count}</Text></Text></View>
                   <Text style={[s.body, { fontWeight: '700' }]}>{money(c.total, cur)}</Text>
                 </View>
                 <View style={{ height: 6, backgroundColor: colors.surface2, borderRadius: 3, marginTop: 6 }}>
@@ -85,13 +86,13 @@ export default function HomeScreen({ nav }) {
         </Card>
 
         <View style={{ flexDirection: 'row', gap: 10, marginTop: 16 }}>
-          <Button title="New report" icon="📄" variant="secondary" style={{ flex: 1 }} onPress={() => nav.push('reports', { create: true })} />
-          <Button title="Export" icon="⬇️" variant="secondary" style={{ flex: 1 }} onPress={() => nav.push('export')} />
+          <Button title="New report" icon="file-plus" variant="secondary" style={{ flex: 1 }} onPress={() => nav.push('reports', { create: true })} />
+          <Button title="Export" icon="download" variant="secondary" style={{ flex: 1 }} onPress={() => nav.push('export')} />
         </View>
 
         <SectionTitle right={<Text style={{ color: colors.accentInk, fontWeight: '700' }} onPress={() => nav.tab('receipts')}>See all</Text>}>Recent</SectionTitle>
         {list.slice(0, 5).map((r) => <ReceiptRow key={r.id} r={r} onPress={() => nav.push('receipt', { id: r.id })} />)}
-        {list.length === 0 && <Button title="Scan your first receipt" icon="📷" onPress={() => nav.tab('scan')} />}
+        {list.length === 0 && <Button title="Scan your first receipt" icon="camera" onPress={() => nav.tab('scan')} />}
       </View>
 
     </ScrollView>

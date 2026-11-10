@@ -1,5 +1,6 @@
 // Organize receipts: search, filter, tag and bulk-export from one tidy archive.
 import { showAlert } from '../platform';
+import { Icon } from '../icons';
 import React, { useMemo, useState } from 'react';
 import { Alert, FlatList, Modal, Pressable, Text, TextInput, View } from 'react-native';
 import { useStore } from '../store';
@@ -48,17 +49,20 @@ export default function ReceiptsScreen({ nav }) {
         right={selecting ? <Text style={{ color: colors.accentInk, fontWeight: '700' }} onPress={() => setSelected([])}>Cancel</Text> : <Text style={{ color: colors.accentInk, fontWeight: '700' }} onPress={() => setSelected(list.map((r) => r.id))}>Select</Text>}
       />
       <View style={{ paddingHorizontal: 16 }}>
-        <TextInput
+        <View style={{ justifyContent: 'center' }}>
+          <TextInput
           value={query}
           onChangeText={setQuery}
-          placeholder="🔍  Search merchant, item, tag, amount…"
+          placeholder="Search merchant, item, tag, amount…"
           placeholderTextColor={colors.faint}
-          style={s.input}
+          style={[s.input, { paddingLeft: 42 }]}
         />
+          <View pointerEvents="none" style={{ position: 'absolute', left: 14 }}><Icon name="search" size={18} color={colors.faint} /></View>
+        </View>
         <ChipRow>
           <Chip label="Needs review" active={onlyReview} onPress={() => setOnlyReview(!onlyReview)} color={colors.accent} />
           {CATEGORIES.map((c) => (
-            <Chip key={c.key} label={`${c.icon} ${c.key}`} active={category === c.key} onPress={() => setCategory(category === c.key ? null : c.key)} />
+            <Chip key={c.key} icon={c.icon} iconColor={c.color} label={c.key} active={category === c.key} onPress={() => setCategory(category === c.key ? null : c.key)} />
           ))}
         </ChipRow>
         {tags.length > 0 && (
@@ -111,7 +115,7 @@ export default function ReceiptsScreen({ nav }) {
               <Text style={[s.h2, { marginBottom: 12 }]}>Set category</Text>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
                 {CATEGORIES.map((c) => (
-                  <Chip key={c.key} label={`${c.icon} ${c.key}`} onPress={() => { updateMany(selected, () => ({ category: c.key })); setModal(null); setSelected([]); }} />
+                  <Chip key={c.key} icon={c.icon} iconColor={c.color} label={c.key} onPress={() => { updateMany(selected, () => ({ category: c.key })); setModal(null); setSelected([]); }} />
                 ))}
               </View>
             </>

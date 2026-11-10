@@ -1,4 +1,5 @@
 // Shared period selection: a month (Jan–Dec of any year) or the whole current year.
+import { Icon } from './icons';
 import React, { useState } from 'react';
 import { Modal, Pressable, Text, View } from 'react-native';
 import { Chip, s } from './components';
@@ -20,7 +21,7 @@ export function periodRange({ mode, year, month }) {
 
 export const periodLabel = (p) => (p.mode === 'year' ? `${p.year}` : `${MONTHS_LONG[p.month]} ${p.year}`);
 
-// "📅 Nov 2026 ▾" (opens a Jan–Dec grid with year arrows) and "This year".
+// "Nov 2026 ▾" (opens a Jan–Dec grid with year arrows) and "This year".
 export function PeriodPicker({ period, onChange }) {
   const now = new Date();
   const [open, setOpen] = useState(false);
@@ -29,7 +30,8 @@ export function PeriodPicker({ period, onChange }) {
     <>
       <View style={{ flexDirection: 'row', gap: 8, paddingVertical: 4 }}>
         <Chip
-          label={`📅  ${MONTHS[period.month]} ${period.year}  ▾`}
+          icon="calendar"
+          label={`${MONTHS[period.month]} ${period.year}  ▾`}
           active={period.mode === 'month'}
           onPress={() => {
             setYear(period.year);
@@ -43,9 +45,9 @@ export function PeriodPicker({ period, onChange }) {
         <Pressable style={{ flex: 1, backgroundColor: '#0008', justifyContent: 'center', padding: 24 }} onPress={() => setOpen(false)}>
           <Pressable style={{ backgroundColor: colors.surface, borderRadius: radius.lg, padding: 16 }} onPress={() => {}}>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-              <Text style={{ color: colors.accentInk, fontSize: 26, paddingHorizontal: 12 }} onPress={() => setYear((y) => y - 1)}>‹</Text>
+              <Pressable hitSlop={10} style={{ paddingHorizontal: 12 }} onPress={() => setYear((y) => y - 1)}><Icon name="chevron-left" size={26} color={colors.accentInk} /></Pressable>
               <Text style={s.h2}>{year}</Text>
-              <Text style={{ color: colors.accentInk, fontSize: 26, paddingHorizontal: 12 }} onPress={() => setYear((y) => y + 1)}>›</Text>
+              <Pressable hitSlop={10} style={{ paddingHorizontal: 12 }} onPress={() => setYear((y) => y + 1)}><Icon name="chevron-right" size={26} color={colors.accentInk} /></Pressable>
             </View>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
               {MONTHS.map((m, i) => {

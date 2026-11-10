@@ -1,5 +1,6 @@
 // Scan receipts: snap a photo (or pick several) and let AI capture every line, tax and total.
 import { showAlert, isWeb, dataUrlParts } from '../platform';
+import { Icon } from '../icons';
 import React, { useState } from 'react';
 import { Alert, Image, ScrollView, Text, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
@@ -102,13 +103,13 @@ export default function ScanScreen({ nav }) {
       <Header title="Scan" subtitle="Snap a receipt — AI does the typing" />
       <View style={{ paddingHorizontal: 16 }}>
         <Card style={{ alignItems: 'center', paddingVertical: 36 }}>
-          <Text style={{ fontSize: 64 }}>🧾</Text>
+          <View style={{ width: 88, height: 88, borderRadius: 44, backgroundColor: colors.accent + '33', alignItems: 'center', justifyContent: 'center' }}><Icon name="scan" size={44} color={colors.accentInk} /></View>
           <Text style={[s.h2, { marginTop: 12 }]}>Capture a receipt</Text>
           <Text style={[s.sub, { textAlign: 'center', marginTop: 6, marginBottom: 20 }]}>
             Lay it flat, fill the frame, good light. Every line, tax and total gets captured.
           </Text>
-          <Button title="Take photo" icon="📷" onPress={fromCamera} style={{ alignSelf: 'stretch' }} />
-          <Button title="Upload from gallery (up to 10)" icon="🖼️" variant="secondary" onPress={fromLibrary} style={{ alignSelf: 'stretch', marginTop: 10 }} />
+          <Button title="Take photo" icon="camera" onPress={fromCamera} style={{ alignSelf: 'stretch' }} />
+          <Button title="Upload from gallery (up to 10)" icon="images" variant="secondary" onPress={fromLibrary} style={{ alignSelf: 'stretch', marginTop: 10 }} />
           <Button title="Enter manually" variant="ghost" onPress={() => nav.push('receipt', { draft: { date: today(), total: 0, tax: 0, lineItems: [], category: 'Others' } })} style={{ marginTop: 6 }} />
         </Card>
 

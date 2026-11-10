@@ -1,3 +1,4 @@
+import { Icon } from './src/icons';
 import React, { useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
@@ -20,11 +21,11 @@ import SettingsScreen from './src/screens/SettingsScreen';
 import InsightsScreen from './src/screens/InsightsScreen';
 
 const TABS = [
-  { key: 'home', label: 'Expenses', icon: '📊', comp: HomeScreen },
-  { key: 'receipts', label: 'Receipts', icon: '🗂️', comp: ReceiptsScreen },
-  { key: 'scan', label: 'Scan', icon: '📷', comp: ScanScreen, center: true },
-  { key: 'agent', label: 'Assistant', icon: '✨', comp: AgentScreen },
-  { key: 'more', label: 'More', icon: '☰', comp: MoreScreen },
+  { key: 'home', label: 'Expenses', icon: 'wallet', comp: HomeScreen },
+  { key: 'receipts', label: 'Receipts', icon: 'receipt', comp: ReceiptsScreen },
+  { key: 'scan', label: 'Scan', icon: 'camera', comp: ScanScreen, center: true },
+  { key: 'agent', label: 'Assistant', icon: 'sparkles', comp: AgentScreen },
+  { key: 'more', label: 'More', icon: 'menu', comp: MoreScreen },
 ];
 
 const STACK = {
@@ -77,14 +78,14 @@ function Shell() {
               return (
                 <Pressable key={t.key} onPress={() => nav.tab(t.key)} style={styles.tab}>
                   <View style={[styles.fab, active && { borderColor: colors.text }]}>
-                    <Text style={{ fontSize: 24 }}>{t.icon}</Text>
+                    <Icon name={t.icon} size={26} color={colors.accentText} />
                   </View>
                 </Pressable>
               );
             }
             return (
               <Pressable key={t.key} onPress={() => nav.tab(t.key)} style={styles.tab}>
-                <Text style={{ fontSize: 20, opacity: active ? 1 : 0.55 }}>{t.icon}</Text>
+                <Icon name={t.icon} size={22} color={active ? colors.accentInk : colors.muted} />
                 <Text style={[styles.tabLabel, active && { color: colors.accentInk }]}>{t.label}</Text>
               </Pressable>
             );

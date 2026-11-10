@@ -1,5 +1,6 @@
 import { showAlert } from '../platform';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Icon } from '../icons';
 import React, { useState } from 'react';
 import { Alert, ScrollView, Switch, Text, View } from 'react-native';
 import { useStore } from '../store';
@@ -60,7 +61,7 @@ export default function ReportDetailScreen({ nav, params }) {
             <Text style={s.body}>Attach receipt images to PDF</Text>
             <Switch value={withImages} onValueChange={setWithImages} trackColor={{ true: colors.accent }} />
           </View>
-          <Button title="Generate PDF report" icon="📄" loading={busy === 'pdf'} onPress={() => run('pdf')} />
+          <Button title="Generate PDF report" icon="file-text" loading={busy === 'pdf'} onPress={() => run('pdf')} />
           <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
             <Button small title="Excel" variant="secondary" style={{ flex: 1 }} loading={busy === 'xlsx'} onPress={() => run('xlsx')} />
             <Button small title="CSV" variant="secondary" style={{ flex: 1 }} loading={busy === 'csv'} onPress={() => run('csv')} />
@@ -78,7 +79,7 @@ export default function ReportDetailScreen({ nav, params }) {
         <SectionTitle>By category</SectionTitle>
         {byCategory(list).map((c) => (
           <View key={c.category} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 6 }}>
-            <Text style={s.body}>{categoryMeta(c.category).icon}  {c.category}</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}><Icon name={categoryMeta(c.category).icon} size={18} color={categoryMeta(c.category).color} /><Text style={s.body}>{c.category}</Text></View>
             <Text style={[s.body, { fontWeight: '700' }]}>{money(c.total, cur)}</Text>
           </View>
         ))}

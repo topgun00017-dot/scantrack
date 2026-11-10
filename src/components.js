@@ -1,6 +1,7 @@
 import React from 'react';
 import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { colors, radius } from './theme';
+import { Icon, isIconName } from './icons';
 import { categoryMeta } from './categories';
 import { money, prettyDate, RANGE_PRESETS } from './utils';
 
@@ -10,7 +11,7 @@ export function Header({ title, subtitle, onBack, right }) {
       <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
         {onBack && (
           <Pressable onPress={onBack} hitSlop={12} style={{ marginRight: 10 }}>
-            <Text style={{ color: colors.text, fontSize: 26 }}>‹</Text>
+            <Icon name="chevron-left" size={28} color={colors.text} />
           </Pressable>
         )}
         <View style={{ flex: 1 }}>
@@ -49,16 +50,22 @@ export function Button({ title, onPress, variant = 'primary', icon, loading, dis
       {loading ? (
         <ActivityIndicator color={v.fg} />
       ) : (
-        <Text style={[s.btnText, small && { fontSize: 13 }, { color: v.fg }]}>{icon ? `${icon}  ` : ''}{title}</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          {isIconName(icon) ? <Icon name={icon} size={small ? 16 : 18} color={v.fg} /> : icon ? <Text style={[s.btnText, { color: v.fg }]}>{icon}</Text> : null}
+          <Text style={[s.btnText, small && { fontSize: 13 }, { color: v.fg }]}>{title}</Text>
+        </View>
       )}
     </Pressable>
   );
 }
 
-export function Chip({ label, active, onPress, color }) {
+export function Chip({ label, active, onPress, color, icon, iconColor }) {
   return (
     <Pressable onPress={onPress} style={[s.chip, active && { backgroundColor: color || colors.accent, borderColor: color || colors.accent }]}>
-      <Text style={[s.chipText, active && { color: colors.accentText }]}>{label}</Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+        {icon ? <Icon name={icon} size={15} color={active ? colors.accentText : iconColor || colors.muted} /> : null}
+        <Text style={[s.chipText, active && { color: colors.accentText }]}>{label}</Text>
+      </View>
     </Pressable>
   );
 }
@@ -97,7 +104,7 @@ export function ReceiptRow({ r, onPress, selected, onLongPress }) {
         <Image source={{ uri: r.imageUri }} style={s.thumb} />
       ) : (
         <View style={[s.thumb, { backgroundColor: c.color + '33', alignItems: 'center', justifyContent: 'center' }]}>
-          <Text style={{ fontSize: 20 }}>{c.icon}</Text>
+          <Icon name={c.icon} size={20} color={c.color} />
         </View>
       )}
       <View style={{ flex: 1, marginLeft: 12 }}>
@@ -116,10 +123,10 @@ export function ReceiptRow({ r, onPress, selected, onLongPress }) {
   );
 }
 
-export function Empty({ icon = '🧾', title, text, action }) {
+export function Empty({ icon = 'receipt', title, text, action }) {
   return (
     <View style={{ alignItems: 'center', padding: 32 }}>
-      <Text style={{ fontSize: 40 }}>{icon}</Text>
+      {isIconName(icon) ? <Icon name={icon} size={44} color={colors.faint} strokeWidth={1.5} /> : <Text style={{ fontSize: 40 }}>{icon}</Text>}
       <Text style={[s.h2, { marginTop: 8 }]}>{title}</Text>
       {!!text && <Text style={[s.sub, { textAlign: 'center', marginTop: 4 }]}>{text}</Text>}
       {action && <View style={{ marginTop: 16 }}>{action}</View>}

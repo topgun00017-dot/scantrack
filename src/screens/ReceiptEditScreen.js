@@ -147,7 +147,7 @@ export default function ReceiptEditScreen({ nav, params }) {
 
         <SectionTitle>Category</SectionTitle>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-          {CATEGORIES.map((c) => <Chip key={c.key} label={`${c.icon} ${c.key}`} active={f.category === c.key} onPress={() => set('category')(c.key)} color={c.color} />)}
+          {CATEGORIES.map((c) => <Chip key={c.key} icon={c.icon} iconColor={c.color} label={c.key} active={f.category === c.key} onPress={() => set('category')(c.key)} color={c.color} />)}
         </View>
 
         <SectionTitle>Tags</SectionTitle>
@@ -168,7 +168,7 @@ export default function ReceiptEditScreen({ nav, params }) {
             <Text style={{ color: colors.danger, fontSize: 18, paddingHorizontal: 4 }} onPress={() => set('lineItems')(f.lineItems.filter((_, idx) => idx !== i))}>✕</Text>
           </View>
         ))}
-        <Button title="Add line item" icon="+" variant="ghost" small onPress={() => set('lineItems')([...f.lineItems, { description: '', qty: '1', amount: '' }])} />
+        <Button title="Add line item" icon="plus" variant="ghost" small onPress={() => set('lineItems')([...f.lineItems, { description: '', qty: '1', amount: '' }])} />
 
         <SectionTitle>Notes</SectionTitle>
         <TextInput value={f.notes} onChangeText={set('notes')} placeholder="Business purpose, attendees…" placeholderTextColor={colors.faint} style={[s.input, { minHeight: 70, textAlignVertical: 'top' }]} multiline />

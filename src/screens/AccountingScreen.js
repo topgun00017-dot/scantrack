@@ -1,6 +1,7 @@
 // Prepare for accounting: tidy the records, then hand a clean package to your accountant.
 import { showAlert } from '../platform';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Icon } from '../icons';
 import React, { useMemo, useState } from 'react';
 import { Alert, ScrollView, Text, View } from 'react-native';
 import { useStore } from '../store';
@@ -77,14 +78,14 @@ export default function AccountingScreen({ nav }) {
         <Card>
           {checklist.map((c) => (
             <View key={c.text} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 6 }}>
-              <Text style={{ width: 26, fontSize: 16, color: c.ok ? colors.success : c.soft ? colors.faint : colors.warning }}>{c.ok ? '✓' : c.soft ? '○' : '!'}</Text>
+              <View style={{ width: 28 }}><Icon name={c.ok ? 'circle-check' : c.soft ? 'circle' : 'circle-alert'} size={18} color={c.ok ? colors.success : c.soft ? colors.faint : colors.warning} /></View>
               <Text style={[s.body, { flex: 1, color: c.ok ? colors.text : colors.muted }]}>{c.text}</Text>
             </View>
           ))}
         </Card>
 
         <SectionTitle right={!!issues.length && <Text style={s.sub}>tap to fix</Text>}>Open items ({issues.length})</SectionTitle>
-        {issues.length === 0 && <Text style={s.sub}>Nothing to fix — your records are clean. 🎉</Text>}
+        {issues.length === 0 && <Text style={s.sub}>Nothing to fix. Your records are clean.</Text>}
         {issues.map((i, idx) => (
           <Card key={i.type + i.id + idx} onPress={() => quickFix(i)} style={{ marginBottom: 8, padding: 12, flexDirection: 'row', alignItems: 'center' }}>
             <View style={{ flex: 1 }}>
@@ -104,7 +105,7 @@ export default function AccountingScreen({ nav }) {
         <Text style={[s.sub, { marginTop: 12 }]}>The package is one ZIP: summary PDF, CSV, Excel workbook, all receipt photos and a list of any open items.</Text>
       </ScrollView>
       <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: 16, paddingBottom: 16 + bottomInset, backgroundColor: colors.surface, borderTopWidth: 1, borderColor: colors.border }}>
-        <Button title="Build package & send to accountant" icon="📦" loading={busy} disabled={!list.length} onPress={confirmHandOff} />
+        <Button title="Build package & send to accountant" icon="package-open" loading={busy} disabled={!list.length} onPress={confirmHandOff} />
       </View>
     </View>
   );

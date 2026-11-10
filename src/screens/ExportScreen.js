@@ -2,6 +2,7 @@
 // for PDF, a layout (Summary, Detailed, Statement).
 import { showAlert } from '../platform';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Icon } from '../icons';
 import React, { useMemo, useState } from 'react';
 import { Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
@@ -24,10 +25,10 @@ const PRESETS = [
 ];
 
 const FORMATS = [
-  { key: 'pdf', icon: '📄', label: 'PDF' },
-  { key: 'xlsx', icon: '📗', label: 'Excel' },
-  { key: 'csv', icon: '📑', label: 'CSV' },
-  { key: 'zip', icon: '🗜️', label: 'ZIP' },
+  { key: 'pdf', icon: 'file-text', label: 'PDF' },
+  { key: 'xlsx', icon: 'file-spreadsheet', label: 'Excel' },
+  { key: 'csv', icon: 'sheet', label: 'CSV' },
+  { key: 'zip', icon: 'file-archive', label: 'ZIP' },
 ];
 
 const LAYOUTS = [
@@ -63,7 +64,7 @@ function DateBox({ label, value, onChange }) {
       }
     >
       <Text style={s.sub}>{label}</Text>
-      <Text style={[s.body, { fontWeight: '700', marginTop: 4 }]}>📅  {prettyDate(value)}</Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 }}><Icon name="calendar" size={16} color={colors.muted} /><Text style={[s.body, { fontWeight: '700' }]}>{prettyDate(value)}</Text></View>
     </Pressable>
   );
 }
@@ -157,16 +158,17 @@ export default function ExportScreen({ nav, params }) {
             {/* Category switcher: ‹ All categories › */}
             <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, paddingVertical: 10 }}>
               <Pressable hitSlop={10} onPress={() => setCatIndex((i) => (i - 1 + cats.length) % cats.length)} style={{ paddingHorizontal: 16 }}>
-                <Text style={{ color: colors.accentInk, fontSize: 28 }}>‹</Text>
+                <Icon name="chevron-left" size={26} color={colors.accentInk} />
               </Pressable>
               <View style={{ flex: 1, alignItems: 'center' }}>
-                <Text style={[s.h2, { fontSize: 20 }]} numberOfLines={1}>
-                  {catMeta ? `${catMeta.icon}  ${catMeta.key}` : 'All categories'}
-                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <Icon name={catMeta ? catMeta.icon : 'shapes'} size={20} color={catMeta ? catMeta.color : colors.accentInk} />
+                  <Text style={[s.h2, { fontSize: 20 }]} numberOfLines={1}>{catMeta ? catMeta.key : 'All categories'}</Text>
+                </View>
                 <Text style={[s.sub, { fontSize: 11, marginTop: 2 }]}>Tap the arrows to change category</Text>
               </View>
               <Pressable hitSlop={10} onPress={() => setCatIndex((i) => (i + 1) % cats.length)} style={{ paddingHorizontal: 16 }}>
-                <Text style={{ color: colors.accentInk, fontSize: 28 }}>›</Text>
+                <Icon name="chevron-right" size={26} color={colors.accentInk} />
               </Pressable>
             </View>
 
@@ -193,7 +195,7 @@ export default function ExportScreen({ nav, params }) {
                 onPress={() => setFormat(f.key)}
                 style={{ flex: 1, alignItems: 'center', paddingVertical: 12, borderRadius: radius.md, borderWidth: 1, backgroundColor: on ? colors.accent : colors.surface, borderColor: on ? colors.accent : colors.border }}
               >
-                <Text style={{ fontSize: 18 }}>{f.icon}</Text>
+                <Icon name={f.icon} size={20} color={on ? colors.accentText : colors.muted} />
                 <Text style={{ marginTop: 2, fontWeight: '700', color: on ? colors.accentText : colors.text }}>{f.label}</Text>
               </Pressable>
             );
@@ -228,7 +230,7 @@ export default function ExportScreen({ nav, params }) {
         <Text style={[s.sub, { marginBottom: 8, textAlign: 'center' }]}>
           {list.length} receipt{list.length === 1 ? '' : 's'} · {money(sum(list), settings.currency)}
         </Text>
-        <Button title="⬇️  Export" loading={busy} disabled={!list.length} onPress={go} />
+        <Button title="Export" icon="download" loading={busy} disabled={!list.length} onPress={go} />
       </View>
     </View>
   );

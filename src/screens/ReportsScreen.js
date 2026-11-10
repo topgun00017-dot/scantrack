@@ -52,7 +52,7 @@ export default function ReportsScreen({ nav, params }) {
           <RangePicker value={preset} onChange={(p) => { setPreset(p); setExcluded([]); }} />
           <SectionTitle>Filter</SectionTitle>
           <ChipRow>
-            {CATEGORIES.map((c) => <Chip key={c.key} label={`${c.icon} ${c.key}`} active={category === c.key} onPress={() => setCategory(category === c.key ? null : c.key)} />)}
+            {CATEGORIES.map((c) => <Chip key={c.key} icon={c.icon} iconColor={c.color} label={c.key} active={category === c.key} onPress={() => setCategory(category === c.key ? null : c.key)} />)}
           </ChipRow>
           {tags.length > 0 && <ChipRow>{tags.map((t) => <Chip key={t} label={`#${t}`} active={tag === t} color={colors.info} onPress={() => setTag(tag === t ? null : t)} />)}</ChipRow>}
           <SectionTitle right={<Text style={s.sub}>tap to include / exclude</Text>}>Receipts ({chosen.length}/{candidates.length})</SectionTitle>
@@ -72,9 +72,9 @@ export default function ReportsScreen({ nav, params }) {
 
   return (
     <View style={{ flex: 1 }}>
-      <Header title="Expense reports" onBack={nav.back} right={<Button small title="New" icon="+" onPress={() => setCreating(true)} />} />
+      <Header title="Expense reports" onBack={nav.back} right={<Button small title="New" icon="plus" onPress={() => setCreating(true)} />} />
       <ScrollView contentContainerStyle={{ padding: 16, gap: 10 }}>
-        {reports.length === 0 && <Empty icon="📄" title="No reports yet" text="Bundle receipts into a professional PDF report for reimbursement or your records." action={<Button title="Create report" onPress={() => setCreating(true)} />} />}
+        {reports.length === 0 && <Empty icon="file-text" title="No reports yet" text="Bundle receipts into a professional PDF report for reimbursement or your records." action={<Button title="Create report" onPress={() => setCreating(true)} />} />}
         {reports.map((rep) => {
           const list = receipts.filter((r) => rep.receiptIds.includes(r.id));
           return (
