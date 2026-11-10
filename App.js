@@ -17,6 +17,7 @@ import ReportDetailScreen from './src/screens/ReportDetailScreen';
 import ExportScreen from './src/screens/ExportScreen';
 import AccountingScreen from './src/screens/AccountingScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
+import InsightsScreen from './src/screens/InsightsScreen';
 
 const TABS = [
   { key: 'home', label: 'Expenses', icon: '📊', comp: HomeScreen },
@@ -33,6 +34,7 @@ const STACK = {
   export: ExportScreen,
   accounting: AccountingScreen,
   settings: SettingsScreen,
+  insights: InsightsScreen,
 };
 
 function Shell() {
