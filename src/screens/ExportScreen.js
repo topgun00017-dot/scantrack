@@ -4,7 +4,7 @@ import { showAlert } from '../platform';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '../icons';
 import React, { useMemo, useState } from 'react';
-import { Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Modal, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
 import { useStore } from '../store';
 import { exportReceipts, deliver } from '../exporters';
@@ -97,6 +97,7 @@ export default function ExportScreen({ nav, params }) {
   const [preset, setPreset] = useState('this_year');
   const [range, setRange] = useState(rangeFor('this_year'));
   const [catIndex, setCatIndex] = useState(0); // 0 = all categories
+  const [catOpen, setCatOpen] = useState(false);
   const [format, setFormat] = useState('pdf');
   const [layout, setLayout] = useState('summary');
   const [busy, setBusy] = useState(false);
@@ -155,22 +156,16 @@ export default function ExportScreen({ nav, params }) {
           </Card>
         ) : (
           <>
-            {/* Category switcher: ‹ All categories › */}
-            <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, paddingVertical: 10 }}>
-              <Pressable hitSlop={10} onPress={() => setCatIndex((i) => (i - 1 + cats.length) % cats.length)} style={{ paddingHorizontal: 16 }}>
-                <Icon name="chevron-left" size={26} color={colors.accentInk} />
-              </Pressable>
-              <View style={{ flex: 1, alignItems: 'center' }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                  <Icon name={catMeta ? catMeta.icon : 'shapes'} size={20} color={catMeta ? catMeta.color : colors.accentInk} />
-                  <Text style={[s.h2, { fontSize: 20 }]} numberOfLines={1}>{catMeta ? catMeta.key : 'All categories'}</Text>
-                </View>
-                <Text style={[s.sub, { fontSize: 11, marginTop: 2 }]}>Tap the arrows to change category</Text>
-              </View>
-              <Pressable hitSlop={10} onPress={() => setCatIndex((i) => (i + 1) % cats.length)} style={{ paddingHorizontal: 16 }}>
-                <Icon name="chevron-right" size={26} color={colors.accentInk} />
-              </Pressable>
-            </View>
+            {/* Category drop-down */}
+            <Label>Category</Label>
+            <Pressable
+              onPress={() => setCatOpen(true)}
+              style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.surface, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, paddingVertical: 14, paddingHorizontal: 14, opacity: pressed ? 0.7 : 1 })}
+            >
+              <Icon name={catMeta ? catMeta.icon : 'shapes'} size={20} color={catMeta ? catMeta.color : colors.accentInk} />
+              <Text style={[s.body, { flex: 1, fontWeight: '700' }]} numberOfLines={1}>{catMeta ? catMeta.key : 'All categories'}</Text>
+              <Icon name="chevron-down" size={20} color={colors.muted} />
+            </Pressable>
 
             <Label>Date range</Label>
             <View style={{ flexDirection: 'row', gap: 10 }}>
@@ -225,6 +220,34 @@ export default function ExportScreen({ nav, params }) {
           <Text style={[s.sub, { marginTop: 10 }]}>{FORMAT_NOTE[format]}</Text>
         )}
       </ScrollView>
+
+      <Modal visible={catOpen} transparent animationType="fade" onRequestClose={() => setCatOpen(false)}>
+        <Pressable style={{ flex: 1, backgroundColor: '#0008', justifyContent: 'center', padding: 24 }} onPress={() => setCatOpen(false)}>
+          <Pressable style={{ backgroundColor: colors.surface, borderRadius: radius.lg, paddingVertical: 8, maxHeight: '80%' }} onPress={() => {}}>
+            <Text style={[s.h2, { paddingHorizontal: 16, paddingVertical: 10 }]}>Choose category</Text>
+            <ScrollView>
+              {cats.map((key, i) => {
+                const m = CATEGORIES.find((c) => c.key === key);
+                const on = i === catIndex;
+                return (
+                  <Pressable
+                    key={key || 'all'}
+                    onPress={() => {
+                      setCatIndex(i);
+                      setCatOpen(false);
+                    }}
+                    style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 13, paddingHorizontal: 16, backgroundColor: on ? colors.surface2 : pressed ? colors.bg : 'transparent' })}
+                  >
+                    <Icon name={m ? m.icon : 'shapes'} size={20} color={m ? m.color : colors.accentInk} />
+                    <Text style={[s.body, { flex: 1, fontWeight: on ? '700' : '400' }]}>{m ? m.key : 'All categories'}</Text>
+                    {on && <Icon name="check" size={18} color={colors.accentInk} />}
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          </Pressable>
+        </Pressable>
+      </Modal>
 
       <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: 16, paddingBottom: 16 + bottomInset, backgroundColor: colors.surface, borderTopWidth: 1, borderColor: colors.border }}>
         <Text style={[s.sub, { marginBottom: 8, textAlign: 'center' }]}>
