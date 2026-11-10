@@ -103,14 +103,57 @@ async function imgData(uri) {
   }
 }
 
-export async function buildReportHTML({ title, subtitle, receipts, settings, includeImages = false, notesBlock = '' }) {
+// layout: 'summary' (totals + one line per receipt), 'detailed' (every receipt with its line
+// items and photo) or 'statement' (bank-statement style, oldest first with a running total).
+export async function buildReportHTML({ title, subtitle, receipts, settings, includeImages = false, notesBlock = '', layout = 'summary' }) {
   const cur = settings.currency;
   const cats = byCategory(receipts);
   const total = sum(receipts);
   const tax = sum(receipts, 'tax');
 
+  const catTable = `<h2>Summary by category</h2>
+    <table><tr><th>Category</th><th class="n">Receipts</th><th class="n">Tax</th><th class="n">Total</th></tr>
+    ${cats.map((c) => `<tr><td>${esc(c.category)}</td><td class="n">${c.count}</td><td class="n">${money(c.tax, cur)}</td><td class="n">${money(c.total, cur)}</td></tr>`).join('')}
+    <tr class="tot"><td>Total</td><td class="n">${receipts.length}</td><td class="n">${money(tax, cur)}</td><td class="n">${money(total, cur)}</td></tr></table>`;
+
+  let body;
+  if (layout === 'statement') {
+    const rows = [...receipts].sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : (a.createdAt || 0) - (b.createdAt || 0)));
+    let bal = 0;
+    body = `<h2>Statement of expenses</h2>
+    <table><tr><th>Date</th><th>Description</th><th>Category</th><th class="n">Tax</th><th class="n">Amount</th><th class="n">Running total</th></tr>
+    <tr class="open"><td></td><td>Opening total</td><td></td><td></td><td></td><td class="n">${money(0, cur)}</td></tr>
+    ${rows
+      .map((r) => {
+        bal += Number(r.total) || 0;
+        const desc = [r.merchant, r.paymentMethod, r.notes].filter(Boolean).map(esc).join(' · ');
+        return `<tr><td>${esc(prettyDate(r.date))}</td><td>${desc}</td><td>${esc(r.category)}</td><td class="n">${money(r.tax, r.currency)}</td><td class="n">${money(r.total, r.currency)}</td><td class="n bal">${money(bal, cur)}</td></tr>`;
+      })
+      .join('')}
+    <tr class="tot"><td></td><td>Closing total</td><td></td><td class="n">${money(tax, cur)}</td><td class="n">${money(total, cur)}</td><td class="n">${money(bal, cur)}</td></tr></table>`;
+  } else if (layout === 'detailed') {
+    let cards = '';
+    for (const r of receipts) {
+      const items = (r.lineItems || []).filter((i) => i.description || i.amount);
+      const src = r.imageUri ? await imgData(r.imageUri) : null;
+      const meta = [prettyDate(r.date), r.category, r.paymentMethod, (r.tags || []).map((t) => '#' + t).join(' ')].filter(Boolean).map(esc).join(' · ');
+      cards += `<div class="rc"><div class="hd"><span>${esc(r.merchant)}</span><span>${money(r.total, r.currency)}</span></div>
+        <div class="mt">${meta}${r.notes ? `<br/>${esc(r.notes)}` : ''}</div>
+        ${items.length ? `<table><tr><th>Item</th><th class="n">Qty</th><th class="n">Amount</th></tr>${items.map((i) => `<tr><td>${esc(i.description)}</td><td class="n">${esc(i.qty)}</td><td class="n">${money(i.amount, r.currency)}</td></tr>`).join('')}</table>` : ''}
+        <table><tr><td>Subtotal</td><td class="n">${money(r.subtotal ?? (r.total - (r.tax || 0)), r.currency)}</td></tr><tr><td>Tax (SST)</td><td class="n">${money(r.tax, r.currency)}</td></tr><tr class="tot"><td>Total</td><td class="n">${money(r.total, r.currency)}</td></tr></table>
+        ${src ? `<img src="${src}"/>` : ''}</div>`;
+    }
+    body = `${catTable}<h2 style="page-break-before:always">Receipts in detail</h2>${cards}`;
+  } else {
+    body = `${catTable}
+    <h2>Itemised expenses</h2>
+    <table><tr><th>Date</th><th>Merchant</th><th>Category</th><th>Payment</th><th class="n">Tax</th><th class="n">Total</th></tr>
+    ${receipts.map((r) => `<tr><td>${esc(prettyDate(r.date))}</td><td>${esc(r.merchant)}${r.notes ? `<br/><span class="sub">${esc(r.notes)}</span>` : ''}</td><td>${esc(r.category)}</td><td>${esc(r.paymentMethod || '')}</td><td class="n">${money(r.tax, r.currency)}</td><td class="n">${money(r.total, r.currency)}</td></tr>`).join('')}
+    </table>`;
+  }
+
   let images = '';
-  if (includeImages) {
+  if (includeImages && layout !== 'detailed') {
     for (const r of receipts.filter((x) => x.imageUri)) {
       const src = await imgData(r.imageUri);
       if (src) images += `<div class="img"><img src="${src}"/><p>${esc(prettyDate(r.date))} · ${esc(r.merchant)} · ${esc(money(r.total, r.currency))}</p></div>`;
@@ -128,19 +171,16 @@ export async function buildReportHTML({ title, subtitle, receipts, settings, inc
     h2{font-size:14px;margin:18px 0 4px} .img{page-break-inside:avoid;margin:12px 0} .img img{max-width:60%;max-height:520px;border:1px solid #E5E7EB}
     .note{background:#FFF8E6;border:1px solid #FFE1A1;padding:10px;border-radius:8px} .sig{margin-top:40px;display:flex;gap:40px}
     .sig div{flex:1;border-top:1px solid #9CA3AF;padding-top:4px;color:#6B7280}
+    .rc{border:1px solid #E5E7EB;border-radius:8px;padding:12px;margin:10px 0;page-break-inside:avoid}
+    .rc .hd{display:flex;justify-content:space-between;font-size:14px;font-weight:700}
+    .rc .mt{color:#6B7280;margin:4px 0 8px} .rc table{margin:6px 0} .rc img{max-width:45%;max-height:360px;border:1px solid #E5E7EB;margin-top:8px}
+    tr.open td{color:#6B7280;font-style:italic} td.bal{font-weight:600}
   </style></head><body>
     <div class="meta"><div><h1>${esc(title)}</h1><div class="sub">${esc(subtitle)}</div></div>
     <div style="text-align:right">${esc(settings.name || '')}<br/>${esc(settings.company || '')}<br/><span class="sub">Generated ${esc(prettyDate(new Date().toISOString().slice(0, 10)))}</span></div></div>
     <div class="kpis"><div class="kpi">Total spend<b>${money(total, cur)}</b></div><div class="kpi">Tax (SST/GST)<b>${money(tax, cur)}</b></div><div class="kpi">Receipts<b>${receipts.length}</b></div></div>
     ${notesBlock}
-    <h2>Summary by category</h2>
-    <table><tr><th>Category</th><th class="n">Receipts</th><th class="n">Tax</th><th class="n">Total</th></tr>
-    ${cats.map((c) => `<tr><td>${esc(c.category)}</td><td class="n">${c.count}</td><td class="n">${money(c.tax, cur)}</td><td class="n">${money(c.total, cur)}</td></tr>`).join('')}
-    <tr class="tot"><td>Total</td><td class="n">${receipts.length}</td><td class="n">${money(tax, cur)}</td><td class="n">${money(total, cur)}</td></tr></table>
-    <h2>Itemised expenses</h2>
-    <table><tr><th>Date</th><th>Merchant</th><th>Category</th><th>Payment</th><th class="n">Tax</th><th class="n">Total</th></tr>
-    ${receipts.map((r) => `<tr><td>${esc(prettyDate(r.date))}</td><td>${esc(r.merchant)}${r.notes ? `<br/><span class="sub">${esc(r.notes)}</span>` : ''}</td><td>${esc(r.category)}</td><td>${esc(r.paymentMethod || '')}</td><td class="n">${money(r.tax, r.currency)}</td><td class="n">${money(r.total, r.currency)}</td></tr>`).join('')}
-    </table>
+    ${body}
     ${images ? `<h2 style="page-break-before:always">Receipt images</h2>${images}` : ''}
     <div class="sig"><div>Submitted by</div><div>Approved by</div><div>Date</div></div>
   </body></html>`;
@@ -156,20 +196,23 @@ async function htmlToPdf(html, fileName) {
 }
 
 // ---------- public export API ----------
-export async function exportReceipts(format, receipts, settings, baseName = 'receipts') {
-  const stamp = new Date().toISOString().slice(0, 10);
-  if (format === 'csv') return emit(`${baseName}_${stamp}.csv`, buildCSV(receipts), 'text/csv');
-  if (format === 'xlsx') return emit(`${baseName}_${stamp}.xlsx`, buildWorkbookBase64(receipts), 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', true);
+export async function exportReceipts(format, receipts, settings, baseName = 'receipts', opts = {}) {
+  // Names that already carry their date range don't get today's date appended.
+  const stamp = /\d{4}-\d{2}-\d{2}/.test(baseName) ? '' : new Date().toISOString().slice(0, 10);
+  if (format === 'csv') return emit(`${baseName}${stamp ? '_' + stamp : ''}.csv`, buildCSV(receipts), 'text/csv');
+  if (format === 'xlsx') return emit(`${baseName}${stamp ? '_' + stamp : ''}.xlsx`, buildWorkbookBase64(receipts), 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', true);
   if (format === 'pdf') {
-    const html = await buildReportHTML({ title: 'Receipts export', subtitle: `${receipts.length} receipts`, receipts, settings, includeImages: true });
-    return htmlToPdf(html, `${baseName}_${stamp}.pdf`);
+    const layout = opts.layout || 'summary';
+    const title = { summary: 'Expense summary', detailed: 'Expense report (detailed)', statement: 'Expense statement' }[layout];
+    const html = await buildReportHTML({ title, subtitle: opts.subtitle || `${receipts.length} receipts`, receipts, settings, layout });
+    return htmlToPdf(html, `${baseName}${stamp ? '_' + stamp : ''}.pdf`);
   }
   if (format === 'zip') {
     const zip = new JSZip();
     zip.file('receipts.csv', buildCSV(receipts));
     zip.file('receipts.xlsx', buildWorkbookBase64(receipts), { base64: true });
     await addImages(zip, receipts);
-    return emit(`${baseName}_${stamp}.zip`, await zip.generateAsync({ type: 'base64' }), 'application/zip', true);
+    return emit(`${baseName}${stamp ? '_' + stamp : ''}.zip`, await zip.generateAsync({ type: 'base64' }), 'application/zip', true);
   }
   throw new Error('Unknown format');
 }

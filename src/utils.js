@@ -26,7 +26,11 @@ export function rangeFor(preset) {
   const now = new Date();
   const y = now.getFullYear();
   const m = now.getMonth();
+  const days = (n) => toISO(new Date(y, m, now.getDate() - n));
   switch (preset) {
+    case 'today': return { from: toISO(now), to: toISO(now) };
+    case 'last_7': return { from: days(6), to: toISO(now) };
+    case 'last_30': return { from: days(29), to: toISO(now) };
     case 'this_month': return { from: toISO(new Date(y, m, 1)), to: toISO(new Date(y, m + 1, 0)) };
     case 'last_month': return { from: toISO(new Date(y, m - 1, 1)), to: toISO(new Date(y, m, 0)) };
     case 'this_quarter': {
