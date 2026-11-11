@@ -100,7 +100,7 @@ export default function ScanScreen({ nav }) {
 
   return (
     <ScrollView contentContainerStyle={{ paddingBottom: 32 }}>
-      <Header title="Scan" subtitle="Snap a receipt — AI does the typing" />
+      <Header title="Scan" />
       <View style={{ paddingHorizontal: 16 }}>
         <Card style={{ alignItems: 'center', paddingVertical: 36 }}>
           <View style={{ width: 88, height: 88, borderRadius: 44, backgroundColor: colors.accent + '33', alignItems: 'center', justifyContent: 'center' }}><Icon name="scan" size={44} color={colors.accentInk} /></View>
