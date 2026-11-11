@@ -7,7 +7,7 @@ import { useStore } from '../store';
 import { Card, Header, SectionTitle, Stat, s } from '../components';
 import { colors } from '../theme';
 import { categoryMeta } from '../categories';
-import { PeriodPicker, currentPeriod, periodLabel, periodRange } from '../period';
+import { PeriodPicker, currentPeriod, inPeriod, periodLabel, periodRange } from '../period';
 import { byCategory, filterReceipts, money, sum } from '../utils';
 
 // One ring segment per category, sized by its share of total spending.
@@ -53,7 +53,7 @@ export default function InsightsScreen({ nav, params }) {
   const cur = settings.currency;
 
   const { list, cats } = useMemo(() => {
-    const list = filterReceipts(receipts, periodRange(period));
+    const list = filterReceipts(receipts, periodRange(period)).filter((r) => inPeriod(period, r.date));
     return { list, cats: byCategory(list) };
   }, [receipts, period]);
   const total = sum(list);

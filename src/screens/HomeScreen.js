@@ -5,7 +5,7 @@ import { ScrollView, Text, View } from 'react-native';
 import { useStore } from '../store';
 import { Button, Card, Chip, ChipRow, Header, ReceiptRow, SectionTitle, Stat, s } from '../components';
 import { colors } from '../theme';
-import { PeriodPicker, currentPeriod, periodLabel as labelFor, periodRange } from '../period';
+import { PeriodPicker, currentPeriod, inPeriod, periodLabel as labelFor, periodRange } from '../period';
 import { categoryMeta } from '../categories';
 import { byCategory, byMonth, filterReceipts, findIssues, money, sum } from '../utils';
 
@@ -17,7 +17,7 @@ export default function HomeScreen({ nav }) {
 
   const { list, cats, months, issues } = useMemo(() => {
     const r = periodRange(period);
-    const list = filterReceipts(receipts, r);
+    const list = filterReceipts(receipts, r).filter((x) => inPeriod(period, x.date));
     return { list, cats: byCategory(list), months: byMonth(receipts, 6), issues: findIssues(receipts).filter((i) => i.type !== 'no_image') };
   }, [receipts, period]);
 
