@@ -7,6 +7,8 @@ import { StoreProvider, useStore } from './src/store';
 import { colors } from './src/theme';
 import DialogHost from './src/DialogHost';
 import ToastHost from './src/Toast';
+import { ProfilesProvider, useProfiles } from './src/profiles';
+import ProfilesScreen from './src/screens/ProfilesScreen';
 
 import HomeScreen from './src/screens/HomeScreen';
 import ReceiptsScreen from './src/screens/ReceiptsScreen';
@@ -99,15 +101,33 @@ function Shell() {
   );
 }
 
+// Ask who is using the app, then load only that person's data. key={id} gives each user a fresh store.
+function Gate() {
+  const { ready, unlocked, active } = useProfiles();
+  if (!ready) {
+    return (
+      <View style={[styles.fill, { alignItems: 'center', justifyContent: 'center' }]}>
+        <ActivityIndicator color={colors.accent} size="large" />
+      </View>
+    );
+  }
+  if (!unlocked || !active) return <ProfilesScreen />;
+  return (
+    <StoreProvider key={active.id} dataKey={active.dataKey} withSamples={!!active.first} userName={active.first ? '' : active.name}>
+      <Shell />
+    </StoreProvider>
+  );
+}
+
 export default function App() {
   return (
     <SafeAreaProvider>
-      <StoreProvider>
+      <ProfilesProvider>
         <StatusBar style="dark" />
-        <Shell />
+        <Gate />
         <ToastHost />
         <DialogHost />
-      </StoreProvider>
+      </ProfilesProvider>
     </SafeAreaProvider>
   );
 }

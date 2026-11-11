@@ -25,8 +25,9 @@ export function Header({ title, subtitle, onBack, right }) {
 }
 
 export function Card({ children, style, onPress }) {
-  const Comp = onPress ? Pressable : View;
-  return <Comp onPress={onPress} style={({ pressed } = {}) => [s.card, pressed && { opacity: 0.8 }, style]}>{children}</Comp>;
+  // Only Pressable accepts a style function; a plain View needs the style array itself.
+  if (!onPress) return <View style={[s.card, style]}>{children}</View>;
+  return <Pressable onPress={onPress} style={({ pressed }) => [s.card, pressed && { opacity: 0.8 }, style]}>{children}</Pressable>;
 }
 
 export function Button({ title, onPress, variant = 'primary', icon, loading, disabled, style, small }) {

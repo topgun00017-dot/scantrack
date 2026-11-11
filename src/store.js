@@ -8,7 +8,6 @@ import { webSample, hasKey } from './ai';
 import { isWeb } from './platform';
 import * as Drive from './drive';
 
-const KEY = 'scantrack:v1';
 
 const DEFAULT_SETTINGS = {
   name: '',
@@ -69,7 +68,9 @@ function demoReceipts() {
 
 const Ctx = createContext(null);
 
-export function StoreProvider({ children }) {
+// dataKey: where this user's data is saved. withSamples: load the sample receipts on a fresh start
+// (only for the first user). userName: pre-fills "Your name" for a new user.
+export function StoreProvider({ children, dataKey = 'scantrack:v1', withSamples = true, userName = '' }) {
   const [ready, setReady] = useState(false);
   const [receipts, setReceipts] = useState([]);
   const [reports, setReports] = useState([]);
@@ -86,7 +87,7 @@ export function StoreProvider({ children }) {
   useEffect(() => {
     (async () => {
       try {
-        const raw = await AsyncStorage.getItem(KEY);
+        const raw = await AsyncStorage.getItem(dataKey);
         if (raw) {
           const s = JSON.parse(raw);
           // Register the user's own categories first so their receipts aren't moved to Others.
@@ -96,7 +97,8 @@ export function StoreProvider({ children }) {
           setDriveTrash(s.driveTrash || []);
           setSettings({ ...DEFAULT_SETTINGS, ...(s.settings || {}) });
         } else {
-          setReceipts(demoReceipts());
+          if (withSamples) setReceipts(demoReceipts());
+          if (userName) setSettings((st) => ({ ...st, name: userName }));
         }
       } catch (e) {
         console.warn('load failed', e);
@@ -108,7 +110,7 @@ export function StoreProvider({ children }) {
 
   useEffect(() => {
     if (!loaded.current) return;
-    AsyncStorage.setItem(KEY, JSON.stringify({ receipts, reports, settings, driveTrash })).catch(() => {});
+    AsyncStorage.setItem(dataKey, JSON.stringify({ receipts, reports, settings, driveTrash })).catch(() => {});
   }, [receipts, reports, settings, driveTrash]);
 
   // ---------- Google Drive auto-save ----------
@@ -238,6 +240,7 @@ export function StoreProvider({ children }) {
   }, [settings.currency]);
 
   setCustomCategories(settings.customCategories || []);
+  Drive.setExpectedAccount(settings.driveEnabled ? settings.driveEmail : null);
 
   // Add a category of the user's own. Returns its name, or throws if the name is empty or taken.
   const addCategory = useCallback(({ name, icon, color }) => {

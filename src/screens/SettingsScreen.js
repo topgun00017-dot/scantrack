@@ -2,9 +2,11 @@ import { showAlert } from '../platform';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useKeyboardHeight } from '../useKeyboard';
 import React, { useState } from 'react';
-import { Alert, Pressable, ScrollView, Text, View } from 'react-native';
+import { Alert, Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { useStore } from '../store';
 import CategoryEditor from '../CategoryEditor';
+import { useProfiles } from '../profiles';
+import { PinPad } from './ProfilesScreen';
 import { Icon } from '../icons';
 import { testAI, cleanKey } from '../ai';
 import { Button, Chip, Field, Header, SectionTitle, s } from '../components';
@@ -17,11 +19,16 @@ export default function SettingsScreen({ nav }) {
   const keyboard = useKeyboardHeight(); // Android: lift content above the on-screen keyboard
   const { settings, setSettings, receipts, clearDemo, webAI, drive, deleteCategory } = useStore();
   const [catEditor, setCatEditor] = useState(false);
+  const { profiles, active, updateProfile, setPin, deleteProfile } = useProfiles();
+  const [userName, setUserName] = useState(active?.name || '');
+  const [pinMode, setPinMode] = useState(false);
   const [connecting, setConnecting] = useState(false);
   // Drive sign-in is saved straight away by the store, so the form must not overwrite it.
   const saveForm = () => {
     const { driveEnabled, driveEmail, customCategories, ...rest } = f; // these are saved directly by the store
     setSettings(rest);
+    const n = userName.replace(/\s+/g, ' ').trim();
+    if (active && n && n !== active.name && !profiles.some((p) => p.id !== active.id && p.name.toLowerCase() === n.toLowerCase())) updateProfile(active.id, { name: n });
   };
   const connect = async () => {
     setConnecting(true);
@@ -66,6 +73,57 @@ export default function SettingsScreen({ nav }) {
     <View style={{ flex: 1 }}>
       <Header title="Settings" onBack={nav.back} />
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 48 + bottomInset + keyboard }} keyboardShouldPersistTaps="handled">
+        {active && (
+          <>
+            <SectionTitle>User</SectionTitle>
+            <Text style={s.label}>User name (shown on the "Who's using" screen)</Text>
+            <TextInput value={userName} onChangeText={setUserName} maxLength={24} style={[s.input, { marginBottom: 10 }]} placeholderTextColor={colors.faint} />
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              <Button small title={active.pinHash ? 'Change PIN' : 'Set a PIN'} variant="secondary" style={{ flex: 1 }} onPress={() => setPinMode(true)} />
+              {active.pinHash ? (
+                <Button
+                  small
+                  title="Remove PIN"
+                  variant="secondary"
+                  style={{ flex: 1 }}
+                  onPress={() => showAlert('Remove PIN?', `Anyone using this phone could open ${active.name}'s receipts.`, [{ text: 'Cancel', style: 'cancel' }, { text: 'Remove', style: 'destructive', onPress: () => setPin(active.id, null) }])}
+                />
+              ) : null}
+            </View>
+            {profiles.length > 1 && (
+              <Button
+                small
+                title={`Delete user ${active.name}`}
+                variant="danger"
+                style={{ marginTop: 8 }}
+                onPress={() =>
+                  showAlert(`Delete ${active.name}?`, `This permanently removes ${active.name}'s receipts, reports and settings from this phone. Files already backed up to Google Drive are kept.`, [
+                    { text: 'Cancel', style: 'cancel' },
+                    { text: 'Delete', style: 'destructive', onPress: () => deleteProfile(active.id) },
+                  ])
+                }
+              />
+            )}
+            <Modal visible={pinMode} transparent animationType="fade" onRequestClose={() => setPinMode(false)}>
+              <Pressable style={{ flex: 1, backgroundColor: '#0008', justifyContent: 'center', padding: 20 }} onPress={() => setPinMode(false)}>
+                <Pressable style={{ backgroundColor: colors.surface, borderRadius: 18, padding: 20 }} onPress={() => {}}>
+                  <PinPad
+                    title="Choose a PIN"
+                    subtitle="4 to 6 digits, then tap ✓"
+                    mode="set"
+                    onDone={(pin) => {
+                      setPin(active.id, pin);
+                      setPinMode(false);
+                      showAlert('PIN saved', `You'll need it to open ${active.name}'s receipts.`);
+                    }}
+                    onCancel={() => setPinMode(false)}
+                  />
+                </Pressable>
+              </Pressable>
+            </Modal>
+          </>
+        )}
+
         <SectionTitle>Profile</SectionTitle>
         <Field label="Your name" value={f.name} onChangeText={set('name')} placeholder="Shown on reports" />
         <Field label="Company" value={f.company} onChangeText={set('company')} placeholder="Optional" />
@@ -85,7 +143,11 @@ export default function SettingsScreen({ nav }) {
                 <Text style={[s.sub, { marginTop: 4, color: drive.status.error ? colors.danger : colors.muted }]}>{driveLine}</Text>
                 <Text style={[s.sub, { marginTop: 4 }]}>Photos go to My Drive › ScanTrack Receipts › year › month, with a "ScanTrack receipts list" sheet of all receipts.</Text>
                 <View style={{ flexDirection: 'row', gap: 8, marginTop: 10 }}>
-                  <Button small title="Sync now" variant="secondary" style={{ flex: 1 }} loading={drive.status.syncing} onPress={drive.syncNow} />
+                  {drive.status.error ? (
+                    <Button small title="Sign in again" variant="secondary" style={{ flex: 1 }} loading={connecting} onPress={connect} />
+                  ) : (
+                    <Button small title="Sync now" variant="secondary" style={{ flex: 1 }} loading={drive.status.syncing} onPress={drive.syncNow} />
+                  )}
                   <Button small title="Sign out" variant="danger" style={{ flex: 1 }} onPress={() => showAlert('Stop saving to Google Drive?', 'Files already in your Drive are kept.', [{ text: 'Cancel', style: 'cancel' }, { text: 'Sign out', style: 'destructive', onPress: drive.disconnect }])} />
                 </View>
               </>

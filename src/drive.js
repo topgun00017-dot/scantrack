@@ -68,6 +68,18 @@ export async function signOut() {
   const g = lib();
   if (g) await g.GoogleSignin.signOut().catch(() => {});
   cache.clear();
+  sheetId = null;
+}
+
+// The Google account this user connected. On a shared phone another user's account may still be
+// signed in, so uploads stop rather than going to the wrong Drive.
+let expectedEmail = null;
+export function setExpectedAccount(email) {
+  if (email !== expectedEmail) {
+    expectedEmail = email || null;
+    cache.clear();
+    sheetId = null;
+  }
 }
 
 async function token() {
@@ -75,7 +87,12 @@ async function token() {
   if (!g) throw new Error('Google Drive is not available here.');
   if (!g.GoogleSignin.getCurrentUser()) {
     const r = await g.GoogleSignin.signInSilently();
-    if (r?.type !== 'success') throw new Error('Signed out of Google. Sign in again in Settings.');
+    if (r?.type !== 'success') throw new Error('Signed out of Google. Tap Sign in with Google to reconnect.');
+  }
+  const current = g.GoogleSignin.getCurrentUser()?.user?.email;
+  if (expectedEmail && current && current.toLowerCase() !== expectedEmail.toLowerCase()) {
+    await g.GoogleSignin.signOut().catch(() => {});
+    throw new Error(`Google is signed in as a different account. Sign in again as ${expectedEmail}.`);
   }
   const { accessToken } = await g.GoogleSignin.getTokens();
   return accessToken;
