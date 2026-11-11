@@ -108,7 +108,7 @@ export default function ScanScreen({ nav }) {
           <Text style={[s.sub, { textAlign: 'center', marginTop: 6, marginBottom: 20 }]}>
             Lay it flat, fill the frame, good light. Every line, tax and total gets captured.
           </Text>
-          <Button title="Take photo" icon="camera" onPress={fromCamera} style={{ alignSelf: 'stretch' }} />
+          <Button title="Snap Picture" icon="camera" onPress={fromCamera} style={{ alignSelf: 'stretch' }} />
           <Button title="Upload from gallery (up to 10)" icon="images" variant="secondary" onPress={fromLibrary} style={{ alignSelf: 'stretch', marginTop: 10 }} />
           <Button title="Enter manually" variant="ghost" onPress={() => nav.push('receipt', { draft: { date: today(), total: 0, tax: 0, lineItems: [], category: 'Others' } })} style={{ marginTop: 6 }} />
         </Card>
