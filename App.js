@@ -51,7 +51,8 @@ function Shell({ tab, setTab }) {
     replace: (name, params = {}) => setStack((st) => [...st.slice(0, -1), { name, params }]),
     tab: (key, params) => {
       setStack([]);
-      if (params) setTabParams((p) => ({ ...p, [key]: { ...params, at: Date.now() } }));
+      // A one-off instruction for that tab (e.g. open Insights on a period, or snap a photo); cleared on a plain tab switch.
+      setTabParams((p) => ({ ...p, [key]: params ? { ...params, at: Date.now() } : undefined }));
       setTab(key);
     },
   };
@@ -79,7 +80,7 @@ function Shell({ tab, setTab }) {
             const active = t.key === tab;
             if (t.center) {
               return (
-                <Pressable key={t.key} onPress={() => nav.tab(t.key)} style={styles.tab}>
+                <Pressable key={t.key} onPress={() => (tab === 'scan' && !StackComp ? nav.tab('scan', { snap: true }) : nav.tab(t.key))} style={styles.tab}>
                   <View style={[styles.fab, active && { borderColor: colors.text }]}>
                     <Icon name={t.icon} size={26} color={colors.accentText} />
                   </View>

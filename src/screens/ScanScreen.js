@@ -2,7 +2,7 @@
 import { showAlert, isWeb, dataUrlParts } from '../platform';
 import { Icon } from '../icons';
 import CompanySwitcher from '../CompanySwitcher';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Alert, Image, ScrollView, Text, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useStore } from '../store';
@@ -11,7 +11,7 @@ import { Button, Card, Header, s } from '../components';
 import { colors } from '../theme';
 import { findDuplicate, today } from '../utils';
 
-export default function ScanScreen({ nav }) {
+export default function ScanScreen({ nav, params }) {
   const { settings, persistImage, addReceipt, aiReady, receipts } = useStore();
   const [busy, setBusy] = useState(null); // { uri, label }
   const hasAI = aiReady;
@@ -45,6 +45,11 @@ export default function ScanScreen({ nav }) {
       setBusy(null);
     }
   };
+
+  // Tapping the camera button in the tab bar while already on Scan takes a photo straight away.
+  useEffect(() => {
+    if (params?.snap) fromCamera();
+  }, [params?.at]);
 
   const fromLibrary = async () => {
     const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.6, base64: true, allowsMultipleSelection: true, selectionLimit: 10 });
