@@ -3,7 +3,7 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useR
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system/legacy';
 import { uid, toISO } from './utils';
-import { autoCategorize, migrateCategory } from './categories';
+import { CATEGORY_KEYS, OTHERS, autoCategorize, migrateCategory, setCustomCategories } from './categories';
 import { webSample, hasKey } from './ai';
 import { isWeb } from './platform';
 import * as Drive from './drive';
@@ -20,6 +20,7 @@ const DEFAULT_SETTINGS = {
   apiKey: '',
   driveEnabled: false, // auto-save receipts to Google Drive
   driveEmail: '',
+  customCategories: [], // [{ key, icon, color }] added by the user
   openaiKey: '',
   openaiModel: 'gpt-5.4-mini',
   model: 'claude-sonnet-5-5',
@@ -88,6 +89,8 @@ export function StoreProvider({ children }) {
         const raw = await AsyncStorage.getItem(KEY);
         if (raw) {
           const s = JSON.parse(raw);
+          // Register the user's own categories first so their receipts aren't moved to Others.
+          setCustomCategories(s.settings?.customCategories || []);
           setReceipts((s.receipts || []).map((r) => ({ ...r, category: migrateCategory(r) })));
           setReports(s.reports || []);
           setDriveTrash(s.driveTrash || []);
@@ -234,10 +237,32 @@ export function StoreProvider({ children }) {
     };
   }, [settings.currency]);
 
+  setCustomCategories(settings.customCategories || []);
+
+  // Add a category of the user's own. Returns its name, or throws if the name is empty or taken.
+  const addCategory = useCallback(({ name, icon, color }) => {
+    const key = String(name || '').replace(/\s+/g, ' ').trim();
+    if (!key) throw new Error('Type a name for the category.');
+    if (key.length > 30) throw new Error('Keep the name to 30 characters or fewer.');
+    if (CATEGORY_KEYS.some((k) => k.toLowerCase() === key.toLowerCase())) throw new Error(`"${key}" already exists.`);
+    const next = [...(latest.current.settings.customCategories || []), { key, icon, color }];
+    setCustomCategories(next);
+    setSettings((st) => ({ ...st, customCategories: next }));
+    return key;
+  }, []);
+
+  // Remove one of the user's categories; its receipts move to Others.
+  const deleteCategory = useCallback((key) => {
+    const next = (latest.current.settings.customCategories || []).filter((c) => c.key !== key);
+    setCustomCategories(next);
+    setSettings((st) => ({ ...st, customCategories: next }));
+    setReceipts((list) => list.map((r) => (r.category === key ? { ...r, category: OTHERS, driveDirty: true, _rev: (r._rev || 0) + 1 } : r)));
+  }, []);
+
   const aiReady = webAI || hasKey(settings);
   const driveWaiting = settings.driveEnabled ? receipts.filter((r) => !r.demo && r.driveDirty).length : 0;
   const drive = { available: Drive.driveAvailable(), status: driveStatus, waiting: driveWaiting, connect: connectDrive, disconnect: disconnectDrive, syncNow };
-  const value = { ready, receipts, reports, settings, aiReady, webAI, drive, ...api };
+  const value = { ready, receipts, reports, settings, aiReady, webAI, drive, addCategory, deleteCategory, ...api };
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 

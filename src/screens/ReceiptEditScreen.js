@@ -7,6 +7,7 @@ import { useStore } from '../store';
 import { Button, Card, Chip, Field, Header, SectionTitle, s } from '../components';
 import { colors } from '../theme';
 import { CATEGORIES, autoCategorize } from '../categories';
+import CategoryEditor from '../CategoryEditor';
 import { findDuplicate, money, prettyDate } from '../utils';
 
 const num = (v) => {
@@ -36,6 +37,7 @@ export default function ReceiptEditScreen({ nav, params }) {
   });
   const [tagInput, setTagInput] = useState('');
   const [zoom, setZoom] = useState(false);
+  const [catEditor, setCatEditor] = useState(false);
   const set = (k) => (v) => setF((x) => ({ ...x, [k]: v }));
 
   const itemsTotal = f.lineItems.reduce((acc, i) => acc + num(i.amount), 0);
@@ -148,6 +150,7 @@ export default function ReceiptEditScreen({ nav, params }) {
         <SectionTitle>Category</SectionTitle>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
           {CATEGORIES.map((c) => <Chip key={c.key} icon={c.icon} iconColor={c.color} label={c.key} active={f.category === c.key} onPress={() => set('category')(c.key)} color={c.color} />)}
+          <Chip icon="plus" label="New category" onPress={() => setCatEditor(true)} />
         </View>
 
         <SectionTitle>Tags</SectionTitle>
@@ -175,6 +178,8 @@ export default function ReceiptEditScreen({ nav, params }) {
 
         <Button title={isNew ? 'Save receipt' : f.status === 'needs_review' ? 'Save & mark reviewed' : 'Save changes'} onPress={save} style={{ marginTop: 20 }} />
       </ScrollView>
+
+      <CategoryEditor visible={catEditor} onClose={() => setCatEditor(false)} onCreated={(key) => set('category')(key)} />
 
       <Modal visible={zoom} transparent onRequestClose={() => setZoom(false)}>
         <Pressable style={{ flex: 1, backgroundColor: '#000', justifyContent: 'center' }} onPress={() => setZoom(false)}>

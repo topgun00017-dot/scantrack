@@ -21,6 +21,27 @@ export const CATEGORIES = [
 
 export const CATEGORY_KEYS = CATEGORIES.map((c) => c.key);
 
+// ---------- user-added categories ----------
+// CATEGORIES and CATEGORY_KEYS are updated in place so every screen that imported them sees
+// the user's own categories (inserted before "Others", which always stays last).
+const BUILT_IN = CATEGORIES.slice();
+export const BUILT_IN_KEYS = BUILT_IN.map((c) => c.key);
+export const CUSTOM_ICONS = ['tag', 'briefcase', 'shopping-cart', 'gift', 'wrench', 'house', 'zap', 'coffee', 'heart-pulse', 'graduation-cap', 'truck', 'megaphone', 'baby', 'dog', 'shirt', 'landmark'];
+export const CUSTOM_COLORS = ['#0EA5E9', '#10B981', '#F59E0B', '#E11D48', '#7C3AED', '#0891B2', '#65A30D', '#DB2777', '#EA580C', '#475569'];
+let lastCustom = '[]';
+
+export function setCustomCategories(list = []) {
+  const sig = JSON.stringify(list);
+  if (sig === lastCustom) return;
+  lastCustom = sig;
+  const custom = list.map((c) => ({ key: c.key, icon: c.icon || 'tag', color: c.color || '#475569', hint: `user-defined category "${c.key}"`, words: [], custom: true }));
+  const all = [...BUILT_IN.filter((c) => c.key !== OTHERS), ...custom, BUILT_IN.find((c) => c.key === OTHERS)];
+  CATEGORIES.splice(0, CATEGORIES.length, ...all);
+  CATEGORY_KEYS.splice(0, CATEGORY_KEYS.length, ...all.map((c) => c.key));
+}
+
+export const isCustomCategory = (key) => !!CATEGORIES.find((c) => c.key === key && c.custom);
+
 export function categoryMeta(key) {
   return CATEGORIES.find((c) => c.key === key) || CATEGORIES[CATEGORIES.length - 1];
 }
@@ -45,7 +66,7 @@ export function normalizeCategory(cat, merchant, items) {
 }
 
 // For the AI prompt: "Purchases: goods bought for resale…" one per line.
-export const CATEGORY_GUIDE = CATEGORIES.map((c) => `- ${c.key}: ${c.hint}`).join('\n');
+export const categoryGuide = () => CATEGORIES.map((c) => `- ${c.key}: ${c.hint}`).join('\n');
 
 // Receipts saved before the category list changed are moved to the new categories.
 const LEGACY = {

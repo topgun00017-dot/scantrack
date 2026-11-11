@@ -1,8 +1,10 @@
 import { showAlert } from '../platform';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import React, { useState } from 'react';
-import { Alert, ScrollView, Text, View } from 'react-native';
+import { Alert, Pressable, ScrollView, Text, View } from 'react-native';
 import { useStore } from '../store';
+import CategoryEditor from '../CategoryEditor';
+import { Icon } from '../icons';
 import { testAI, cleanKey } from '../ai';
 import { Button, Chip, Field, Header, SectionTitle, s } from '../components';
 import { colors } from '../theme';
@@ -11,11 +13,12 @@ const CURRENCIES = ['MYR', 'SGD', 'USD', 'EUR', 'GBP'];
 
 export default function SettingsScreen({ nav }) {
   const bottomInset = useSafeAreaInsets().bottom; // clear Android's navigation bar
-  const { settings, setSettings, receipts, clearDemo, webAI, drive } = useStore();
+  const { settings, setSettings, receipts, clearDemo, webAI, drive, deleteCategory } = useStore();
+  const [catEditor, setCatEditor] = useState(false);
   const [connecting, setConnecting] = useState(false);
   // Drive sign-in is saved straight away by the store, so the form must not overwrite it.
   const saveForm = () => {
-    const { driveEnabled, driveEmail, ...rest } = f;
+    const { driveEnabled, driveEmail, customCategories, ...rest } = f; // these are saved directly by the store
     setSettings(rest);
   };
   const connect = async () => {
@@ -95,6 +98,38 @@ export default function SettingsScreen({ nav }) {
             )}
           </>
         )}
+
+        <SectionTitle>My categories</SectionTitle>
+        {(settings.customCategories || []).length === 0 && (
+          <Text style={[s.sub, { marginBottom: 8 }]}>Add your own categories here or from a receipt's category list. They work everywhere: filters, exports, reports and AI scanning.</Text>
+        )}
+        {(settings.customCategories || []).map((c) => {
+          const used = receipts.filter((r) => r.category === c.key).length;
+          return (
+            <View key={c.key} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8 }}>
+              <View style={{ width: 34, height: 34, borderRadius: 9, backgroundColor: c.color + '26', alignItems: 'center', justifyContent: 'center' }}>
+                <Icon name={c.icon} size={18} color={c.color} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={s.body}>{c.key}</Text>
+                <Text style={s.sub}>{used} receipt{used === 1 ? '' : 's'}</Text>
+              </View>
+              <Pressable
+                hitSlop={10}
+                onPress={() =>
+                  showAlert(`Delete "${c.key}"?`, used ? `Its ${used} receipt${used === 1 ? '' : 's'} will move to Others.` : 'No receipts use it.', [
+                    { text: 'Cancel', style: 'cancel' },
+                    { text: 'Delete', style: 'destructive', onPress: () => deleteCategory(c.key) },
+                  ])
+                }
+              >
+                <Icon name="trash" size={20} color={colors.danger} />
+              </Pressable>
+            </View>
+          );
+        })}
+        <Button small title="Add category" icon="plus" variant="secondary" style={{ marginTop: 8 }} onPress={() => setCatEditor(true)} />
+        <CategoryEditor visible={catEditor} onClose={() => setCatEditor(false)} />
 
         <SectionTitle>Accountant</SectionTitle>
         <Field label="Accountant name" value={f.accountantName} onChangeText={set('accountantName')} />

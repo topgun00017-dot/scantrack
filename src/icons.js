@@ -41,6 +41,23 @@ import ChevronDown from 'lucide-react-native/icons/chevron-down';
 import Plus from 'lucide-react-native/icons/plus';
 import X from 'lucide-react-native/icons/x';
 import Package2 from 'lucide-react-native/icons/package-open';
+import Tag from 'lucide-react-native/icons/tag';
+import Briefcase from 'lucide-react-native/icons/briefcase';
+import ShoppingCart from 'lucide-react-native/icons/shopping-cart';
+import Gift from 'lucide-react-native/icons/gift';
+import Wrench from 'lucide-react-native/icons/wrench';
+import House from 'lucide-react-native/icons/house';
+import Zap from 'lucide-react-native/icons/zap';
+import Coffee from 'lucide-react-native/icons/coffee';
+import HeartPulse from 'lucide-react-native/icons/heart-pulse';
+import GraduationCap from 'lucide-react-native/icons/graduation-cap';
+import Truck from 'lucide-react-native/icons/truck';
+import Megaphone from 'lucide-react-native/icons/megaphone';
+import Baby from 'lucide-react-native/icons/baby';
+import Dog from 'lucide-react-native/icons/dog';
+import Shirt from 'lucide-react-native/icons/shirt';
+import Landmark from 'lucide-react-native/icons/landmark';
+import Trash2 from 'lucide-react-native/icons/trash';
 import { colors } from './theme';
 
 const ICONS = {
@@ -84,6 +101,23 @@ const ICONS = {
   'chevron-down': ChevronDown,
   plus: Plus,
   x: X,
+  'tag': Tag,
+  'briefcase': Briefcase,
+  'shopping-cart': ShoppingCart,
+  'gift': Gift,
+  'wrench': Wrench,
+  'house': House,
+  'zap': Zap,
+  'coffee': Coffee,
+  'heart-pulse': HeartPulse,
+  'graduation-cap': GraduationCap,
+  'truck': Truck,
+  'megaphone': Megaphone,
+  'baby': Baby,
+  'dog': Dog,
+  'shirt': Shirt,
+  'landmark': Landmark,
+  'trash': Trash2,
 };
 
 export const isIconName = (n) => typeof n === 'string' && !!ICONS[n];
