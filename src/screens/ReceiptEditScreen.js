@@ -13,6 +13,7 @@ import { useCompanies } from '../companies';
 import { CompanyDot } from '../CompanySwitcher';
 import { Icon } from '../icons';
 import { showToast } from '../Toast';
+import { showReceiptResult } from '../ReceiptResult';
 import { findDuplicate, money, prettyDate } from '../utils';
 
 const num = (v) => {
@@ -101,13 +102,10 @@ export default function ReceiptEditScreen({ nav, params }) {
       return;
     }
     const commit = (r) => {
-      if (isNew) addReceipt(r);
-      else updateReceipt(existing.id, r);
+      const id = isNew ? addReceipt(r).id : existing.id;
+      if (!isNew) updateReceipt(existing.id, r);
       nav.back();
-      showToast({
-        title: isNew ? 'Receipt saved' : 'Changes saved',
-        text: `${r.merchant} · ${money(r.total, r.currency)} · ${r.category}${settings.driveEnabled ? ' · backing up to Google Drive' : ''}`,
-      });
+      showReceiptResult({ id, isNew }); // "Receipt Saved!" panel with upload progress
     };
     // Same date and amount at a similar-named shop: ask before saving a second copy.
     const twin = findDuplicate(receipts, { ...rec, confirmedUnique: existing?.confirmedUnique }, existing?.id);

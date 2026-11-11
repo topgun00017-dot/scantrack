@@ -223,6 +223,13 @@ export async function trashFile(fileId) {
 
 // Keep a Google Sheet listing every receipt in the ScanTrack Receipts folder.
 const sheetIds = {}; // per company
+// Links for the "Receipt saved" panel.
+export const fileUrl = (fileId) => (fileId ? `https://drive.google.com/file/d/${fileId}/view` : null);
+export function sheetUrl() {
+  const id = sheetIds[companyName || '_'];
+  return id ? `https://docs.google.com/spreadsheets/d/${id}/edit` : null;
+}
+
 export async function updateSheet(receipts) {
   const tok = await token();
   const root = await companyFolder(tok);

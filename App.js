@@ -7,6 +7,7 @@ import { StoreProvider, useStore } from './src/store';
 import { colors } from './src/theme';
 import DialogHost from './src/DialogHost';
 import ToastHost from './src/Toast';
+import ReceiptResultHost from './src/ReceiptResult';
 import { CompaniesProvider, useCompanies } from './src/companies';
 
 import HomeScreen from './src/screens/HomeScreen';
@@ -96,6 +97,7 @@ function Shell({ tab, setTab }) {
           })}
         </SafeAreaView>
       )}
+      <ReceiptResultHost />
     </SafeAreaView>
   );
 }
