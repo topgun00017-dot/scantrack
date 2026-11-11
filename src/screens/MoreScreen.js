@@ -10,7 +10,7 @@ export default function MoreScreen({ nav }) {
   const { reports, receipts } = useStore();
   const issues = findIssues(receipts).filter((i) => i.type !== 'no_image').length;
   const items = [
-    { icon: 'chart-pie', title: 'Spending breakdown', text: 'Donut chart of spending by category, by month or year', go: 'insights' },
+    { icon: 'sparkles', title: 'Assistant', text: 'Ask AI to find, tag, categorise and check your receipts', go: 'agent' },
     { icon: 'file-text', title: 'Expense reports', text: `Professional PDF reports in one tap · ${reports.length} saved`, go: 'reports' },
     { icon: 'download', title: 'Export data', text: 'CSV, PDF, Excel or ZIP — your way', go: 'export' },
     { icon: 'calculator', title: 'Prepare for accounting', text: issues ? `${issues} item(s) to tidy, then hand off to your accountant` : 'Clean records ready for your accountant', go: 'accounting' },

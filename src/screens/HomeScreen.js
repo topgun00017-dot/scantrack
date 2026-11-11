@@ -66,7 +66,7 @@ export default function HomeScreen({ nav }) {
           </View>
         </Card>
 
-        <SectionTitle right={<Text style={{ color: colors.accentInk, fontWeight: '700' }} onPress={() => nav.push('insights', { period })}>Breakdown ›</Text>}>By category</SectionTitle>
+        <SectionTitle right={<Text style={{ color: colors.accentInk, fontWeight: '700' }} onPress={() => nav.tab('insights', { period })}>Breakdown ›</Text>}>By category</SectionTitle>
         <Card>
           {cats.length === 0 && <Text style={s.sub}>No spending in this period yet.</Text>}
           {cats.map((c) => {

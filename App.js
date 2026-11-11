@@ -23,9 +23,9 @@ import InsightsScreen from './src/screens/InsightsScreen';
 
 const TABS = [
   { key: 'home', label: 'Expenses', icon: 'wallet', comp: HomeScreen },
-  { key: 'receipts', label: 'Receipts', icon: 'receipt', comp: ReceiptsScreen },
+  { key: 'insights', label: 'Insights', icon: 'chart-pie', comp: InsightsScreen },
   { key: 'scan', label: 'Scan', icon: 'camera', comp: ScanScreen, center: true },
-  { key: 'agent', label: 'Assistant', icon: 'sparkles', comp: AgentScreen },
+  { key: 'receipts', label: 'Receipts', icon: 'receipt', comp: ReceiptsScreen },
   { key: 'more', label: 'More', icon: 'menu', comp: MoreScreen },
 ];
 
@@ -36,20 +36,22 @@ const STACK = {
   export: ExportScreen,
   accounting: AccountingScreen,
   settings: SettingsScreen,
-  insights: InsightsScreen,
+  agent: AgentScreen,
 };
 
 function Shell() {
   const { ready } = useStore();
   const [tab, setTab] = useState('home');
   const [stack, setStack] = useState([]); // [{ name, params }]
+  const [tabParams, setTabParams] = useState({}); // e.g. the period Insights should open on
 
   const nav = {
     push: (name, params = {}) => setStack((st) => [...st, { name, params }]),
     back: () => setStack((st) => st.slice(0, -1)),
     replace: (name, params = {}) => setStack((st) => [...st.slice(0, -1), { name, params }]),
-    tab: (key) => {
+    tab: (key, params) => {
       setStack([]);
+      if (params) setTabParams((p) => ({ ...p, [key]: { ...params, at: Date.now() } }));
       setTab(key);
     },
   };
@@ -69,7 +71,7 @@ function Shell() {
   return (
     <SafeAreaView style={styles.fill} edges={['top', 'left', 'right']}>
       <View style={{ flex: 1 }}>
-        {StackComp ? <StackComp key={stack.length} nav={nav} params={top.params} /> : <TabComp nav={nav} />}
+        {StackComp ? <StackComp key={stack.length} nav={nav} params={top.params} /> : <TabComp nav={nav} params={tabParams[tab]} />}
       </View>
       {!StackComp && (
         <SafeAreaView edges={['bottom']} style={styles.tabbar}>
