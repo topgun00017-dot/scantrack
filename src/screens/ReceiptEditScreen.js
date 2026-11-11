@@ -1,6 +1,7 @@
 // Review / edit a receipt: extracted fields, line items, category, tags.
 import { showAlert } from '../platform';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useKeyboardHeight } from '../useKeyboard';
 import React, { useMemo, useState } from 'react';
 import { Alert, Image, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { useStore } from '../store';
@@ -18,6 +19,7 @@ const num = (v) => {
 
 export default function ReceiptEditScreen({ nav, params }) {
   const bottomInset = useSafeAreaInsets().bottom; // clear Android's navigation bar
+  const keyboard = useKeyboardHeight(); // Android: lift content above the on-screen keyboard
   const { receipts, addReceipt, updateReceipt, deleteReceipt, settings } = useStore();
   const existing = params.id ? receipts.find((r) => r.id === params.id) : null;
   const src = existing || params.draft || {};
@@ -119,7 +121,7 @@ export default function ReceiptEditScreen({ nav, params }) {
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <Header title={isNew ? 'Review receipt' : 'Receipt'} onBack={nav.back} right={!isNew && <Text style={{ color: colors.danger, fontWeight: '700' }} onPress={remove}>Delete</Text>} />
-      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 48 + bottomInset }} keyboardShouldPersistTaps="handled">
+      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 48 + bottomInset + keyboard }} keyboardShouldPersistTaps="handled">
         {src.imageUri ? (
           <Pressable onPress={() => setZoom(true)}>
             <Image source={{ uri: src.imageUri }} style={{ width: '100%', height: 220, borderRadius: 14, backgroundColor: colors.surface2 }} resizeMode="cover" />

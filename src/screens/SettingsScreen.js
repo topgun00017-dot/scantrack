@@ -1,5 +1,6 @@
 import { showAlert } from '../platform';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useKeyboardHeight } from '../useKeyboard';
 import React, { useState } from 'react';
 import { Alert, Pressable, ScrollView, Text, View } from 'react-native';
 import { useStore } from '../store';
@@ -13,6 +14,7 @@ const CURRENCIES = ['MYR', 'SGD', 'USD', 'EUR', 'GBP'];
 
 export default function SettingsScreen({ nav }) {
   const bottomInset = useSafeAreaInsets().bottom; // clear Android's navigation bar
+  const keyboard = useKeyboardHeight(); // Android: lift content above the on-screen keyboard
   const { settings, setSettings, receipts, clearDemo, webAI, drive, deleteCategory } = useStore();
   const [catEditor, setCatEditor] = useState(false);
   const [connecting, setConnecting] = useState(false);
@@ -63,7 +65,7 @@ export default function SettingsScreen({ nav }) {
   return (
     <View style={{ flex: 1 }}>
       <Header title="Settings" onBack={nav.back} />
-      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 48 + bottomInset }} keyboardShouldPersistTaps="handled">
+      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 48 + bottomInset + keyboard }} keyboardShouldPersistTaps="handled">
         <SectionTitle>Profile</SectionTitle>
         <Field label="Your name" value={f.name} onChangeText={set('name')} placeholder="Shown on reports" />
         <Field label="Company" value={f.company} onChangeText={set('company')} placeholder="Optional" />

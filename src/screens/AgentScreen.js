@@ -1,6 +1,7 @@
 // Assistant: ask in plain language to find, tag, categorise and reconcile receipts.
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import React, { useRef, useState } from 'react';
+import { useKeyboardHeight } from '../useKeyboard';
+import React, { useRef, useState, useEffect } from 'react';
 import { FlatList, KeyboardAvoidingView, Platform, Pressable, Text, TextInput, View } from 'react-native';
 import { useStore } from '../store';
 import { agentTurn } from '../ai';
@@ -21,6 +22,7 @@ const brief = (r) => ({ id: r.id, merchant: r.merchant, date: r.date, total: r.t
 
 export default function AgentScreen({ nav }) {
   const bottomInset = useSafeAreaInsets().bottom; // keep the message box above Android's navigation bar
+  const keyboard = useKeyboardHeight(); // Android: lift content above the on-screen keyboard
   const { receipts, settings, updateMany, aiReady } = useStore();
   const [chat, setChat] = useState([
     { role: 'assistant', text: "Hi! I can find receipts, tag and categorise them, total up spending and check your archive for duplicates or gaps. What do you need?" },
@@ -29,6 +31,9 @@ export default function AgentScreen({ nav }) {
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
   const listRef = useRef(null);
+  useEffect(() => {
+    if (keyboard) setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 50);
+  }, [keyboard]);
   const work = useRef(receipts);
 
   // Tools run against a working copy so several calls in one turn see each other's changes.
@@ -120,7 +125,7 @@ export default function AgentScreen({ nav }) {
   };
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={90}>
+    <KeyboardAvoidingView style={{ flex: 1, paddingBottom: Platform.OS === 'android' ? keyboard : 0 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={90}>
       <Header title="Assistant" onBack={nav.back} subtitle={aiReady ? 'Find · tag · categorise · reconcile' : 'Offline mode — add API key for full power'} />
       <FlatList
         ref={listRef}
@@ -146,7 +151,7 @@ export default function AgentScreen({ nav }) {
           <ChipRow>{SUGGESTIONS.map((q) => <Chip key={q} label={q} onPress={() => send(q)} />)}</ChipRow>
         </View>
       )}
-      <View style={{ flexDirection: 'row', padding: 12, paddingBottom: 12 + bottomInset, gap: 8, borderTopWidth: 1, borderColor: colors.border, backgroundColor: colors.bg }}>
+      <View style={{ flexDirection: 'row', padding: 12, paddingBottom: 12 + (keyboard ? 0 : bottomInset), gap: 8, borderTopWidth: 1, borderColor: colors.border, backgroundColor: colors.bg }}>
         <TextInput value={input} onChangeText={setInput} onSubmitEditing={() => send()} placeholder="Ask about your receipts…" placeholderTextColor={colors.faint} style={[s.input, { flex: 1 }]} returnKeyType="send" />
         <Pressable onPress={() => send()} disabled={busy} style={{ backgroundColor: colors.accent, borderRadius: radius.md, paddingHorizontal: 16, justifyContent: 'center', opacity: busy ? 0.5 : 1 }}>
           <Text style={{ color: colors.accentText, fontWeight: '800', fontSize: 16 }}>↑</Text>
