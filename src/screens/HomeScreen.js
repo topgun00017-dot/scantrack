@@ -1,5 +1,6 @@
 // Track expenses: spending auto-categorised, monthly trend, tax-time readiness.
 import { Icon } from '../icons';
+import CompanySwitcher from '../CompanySwitcher';
 import React, { useMemo, useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { useStore } from '../store';
@@ -29,6 +30,7 @@ export default function HomeScreen({ nav }) {
     <ScrollView contentContainerStyle={{ paddingBottom: 32 }}>
       <Header title={settings.name ? `Hi, ${settings.name.split(' ')[0]}` : 'Expenses'} subtitle="Track spending, stay tax-ready" />
       <View style={{ paddingHorizontal: 16 }}>
+        <CompanySwitcher onManage={() => nav.push('settings')} style={{ marginBottom: 8 }} />
         <PeriodPicker period={period} onChange={setPeriod} />
 
         <Card style={{ marginTop: 12 }}>

@@ -5,8 +5,8 @@ import React, { useState } from 'react';
 import { Alert, Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { useStore } from '../store';
 import CategoryEditor from '../CategoryEditor';
-import { useProfiles } from '../profiles';
-import { PinPad } from './ProfilesScreen';
+import { useCompanies } from '../companies';
+import { CompanyDot } from '../CompanySwitcher';
 import { Icon } from '../icons';
 import { testAI, cleanKey } from '../ai';
 import { Button, Chip, Field, Header, SectionTitle, s } from '../components';
@@ -19,16 +19,25 @@ export default function SettingsScreen({ nav }) {
   const keyboard = useKeyboardHeight(); // Android: lift content above the on-screen keyboard
   const { settings, setSettings, receipts, clearDemo, webAI, drive, deleteCategory } = useStore();
   const [catEditor, setCatEditor] = useState(false);
-  const { profiles, active, updateProfile, setPin, deleteProfile } = useProfiles();
-  const [userName, setUserName] = useState(active?.name || '');
-  const [pinMode, setPinMode] = useState(false);
+  const { companies, active, addCompany, renameCompany, deleteCompany } = useCompanies();
+  const [nameBox, setNameBox] = useState(null); // { id?, value } for adding or renaming a company
+  const [nameError, setNameError] = useState('');
+  const saveCompanyName = () => {
+    try {
+      if (nameBox.id) {
+        const n = renameCompany(nameBox.id, nameBox.value);
+        if (nameBox.id === active?.id && (!f.company || f.company === active.name)) set('company')(n);
+      } else addCompany(nameBox.value);
+      setNameBox(null);
+    } catch (e) {
+      setNameError(e.message);
+    }
+  };
   const [connecting, setConnecting] = useState(false);
   // Drive sign-in is saved straight away by the store, so the form must not overwrite it.
   const saveForm = () => {
     const { driveEnabled, driveEmail, customCategories, ...rest } = f; // these are saved directly by the store
     setSettings(rest);
-    const n = userName.replace(/\s+/g, ' ').trim();
-    if (active && n && n !== active.name && !profiles.some((p) => p.id !== active.id && p.name.toLowerCase() === n.toLowerCase())) updateProfile(active.id, { name: n });
   };
   const connect = async () => {
     setConnecting(true);
@@ -73,60 +82,61 @@ export default function SettingsScreen({ nav }) {
     <View style={{ flex: 1 }}>
       <Header title="Settings" onBack={nav.back} />
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 48 + bottomInset + keyboard }} keyboardShouldPersistTaps="handled">
-        {active && (
-          <>
-            <SectionTitle>User</SectionTitle>
-            <Text style={s.label}>User name (shown on the "Who's using" screen)</Text>
-            <TextInput value={userName} onChangeText={setUserName} maxLength={24} style={[s.input, { marginBottom: 10 }]} placeholderTextColor={colors.faint} />
-            <View style={{ flexDirection: 'row', gap: 8 }}>
-              <Button small title={active.pinHash ? 'Change PIN' : 'Set a PIN'} variant="secondary" style={{ flex: 1 }} onPress={() => setPinMode(true)} />
-              {active.pinHash ? (
-                <Button
-                  small
-                  title="Remove PIN"
-                  variant="secondary"
-                  style={{ flex: 1 }}
-                  onPress={() => showAlert('Remove PIN?', `Anyone using this phone could open ${active.name}'s receipts.`, [{ text: 'Cancel', style: 'cancel' }, { text: 'Remove', style: 'destructive', onPress: () => setPin(active.id, null) }])}
-                />
-              ) : null}
-            </View>
-            {profiles.length > 1 && (
-              <Button
-                small
-                title={`Delete user ${active.name}`}
-                variant="danger"
-                style={{ marginTop: 8 }}
+        <SectionTitle>Companies</SectionTitle>
+        {companies.map((c) => (
+          <View key={c.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8 }}>
+            <CompanyDot color={c.color} size={12} />
+            <Text style={[s.body, { flex: 1, fontWeight: c.id === active?.id ? '700' : '400' }]} numberOfLines={1}>
+              {c.name}
+              {c.id === active?.id ? <Text style={s.sub}>  · current</Text> : null}
+            </Text>
+            <Pressable hitSlop={8} onPress={() => { setNameError(''); setNameBox({ id: c.id, value: c.name }); }} style={{ paddingHorizontal: 6 }}>
+              <Text style={{ color: colors.accentInk, fontWeight: '700' }}>Rename</Text>
+            </Pressable>
+            {companies.length > 1 && (
+              <Pressable
+                hitSlop={8}
                 onPress={() =>
-                  showAlert(`Delete ${active.name}?`, `This permanently removes ${active.name}'s receipts, reports and settings from this phone. Files already backed up to Google Drive are kept.`, [
+                  showAlert(`Delete ${c.name}?`, `This permanently removes ${c.name}'s receipts and reports from this phone. Copies already in Google Drive are kept.`, [
                     { text: 'Cancel', style: 'cancel' },
-                    { text: 'Delete', style: 'destructive', onPress: () => deleteProfile(active.id) },
+                    { text: 'Delete', style: 'destructive', onPress: () => deleteCompany(c.id).catch((e) => showAlert('Could not delete', e.message)) },
                   ])
                 }
-              />
-            )}
-            <Modal visible={pinMode} transparent animationType="fade" onRequestClose={() => setPinMode(false)}>
-              <Pressable style={{ flex: 1, backgroundColor: '#0008', justifyContent: 'center', padding: 20 }} onPress={() => setPinMode(false)}>
-                <Pressable style={{ backgroundColor: colors.surface, borderRadius: 18, padding: 20 }} onPress={() => {}}>
-                  <PinPad
-                    title="Choose a PIN"
-                    subtitle="4 to 6 digits, then tap ✓"
-                    mode="set"
-                    onDone={(pin) => {
-                      setPin(active.id, pin);
-                      setPinMode(false);
-                      showAlert('PIN saved', `You'll need it to open ${active.name}'s receipts.`);
-                    }}
-                    onCancel={() => setPinMode(false)}
-                  />
-                </Pressable>
+              >
+                <Icon name="trash" size={20} color={colors.danger} />
               </Pressable>
-            </Modal>
-          </>
-        )}
+            )}
+          </View>
+        ))}
+        <Button small title="Add company" icon="plus" variant="secondary" style={{ marginTop: 8 }} onPress={() => { setNameError(''); setNameBox({ value: '' }); }} />
+        <Modal visible={!!nameBox} transparent animationType="fade" onRequestClose={() => setNameBox(null)}>
+          <Pressable style={{ flex: 1, backgroundColor: '#0008', justifyContent: 'center', padding: 20 }} onPress={() => setNameBox(null)}>
+            <Pressable style={{ backgroundColor: colors.surface, borderRadius: 18, padding: 20 }} onPress={() => {}}>
+              <Text style={s.h2}>{nameBox?.id ? 'Rename company' : 'Add company'}</Text>
+              <TextInput
+                value={nameBox?.value || ''}
+                onChangeText={(v) => { setNameBox((b) => ({ ...b, value: v })); setNameError(''); }}
+                placeholder="Company name, e.g. ABC Sdn Bhd"
+                placeholderTextColor={colors.faint}
+                maxLength={40}
+                autoFocus
+                onSubmitEditing={saveCompanyName}
+                style={[s.input, { marginTop: 12 }]}
+              />
+              {!!nameError && <Text style={{ color: colors.danger, marginTop: 6 }}>{nameError}</Text>}
+              <View style={{ flexDirection: 'row', gap: 8, marginTop: 14 }}>
+                <Button small title="Cancel" variant="secondary" style={{ flex: 1 }} onPress={() => setNameBox(null)} />
+                <Button small title={nameBox?.id ? 'Save' : 'Add company'} style={{ flex: 2 }} disabled={!(nameBox?.value || '').trim()} onPress={saveCompanyName} />
+              </View>
+            </Pressable>
+          </Pressable>
+        </Modal>
 
-        <SectionTitle>Profile</SectionTitle>
+        <SectionTitle>You</SectionTitle>
         <Field label="Your name" value={f.name} onChangeText={set('name')} placeholder="Shown on reports" />
-        <Field label="Company" value={f.company} onChangeText={set('company')} placeholder="Optional" />
+
+        <SectionTitle>{`This company · ${active?.name || ''}`}</SectionTitle>
+        <Field label="Company name on reports & PDFs" value={f.company} onChangeText={set('company')} placeholder={active?.name || 'Optional'} />
         <Text style={s.label}>Default currency</Text>
         <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
           {CURRENCIES.map((c) => <Chip key={c} label={c} active={f.currency === c} onPress={() => set('currency')(c)} />)}
@@ -195,7 +205,7 @@ export default function SettingsScreen({ nav }) {
         <Button small title="Add category" icon="plus" variant="secondary" style={{ marginTop: 8 }} onPress={() => setCatEditor(true)} />
         <CategoryEditor visible={catEditor} onClose={() => setCatEditor(false)} />
 
-        <SectionTitle>Accountant</SectionTitle>
+        <SectionTitle>{`Accountant for ${active?.name || 'this company'}`}</SectionTitle>
         <Field label="Accountant name" value={f.accountantName} onChangeText={set('accountantName')} />
         <Field label="Accountant email" value={f.accountantEmail} onChangeText={set('accountantEmail')} keyboardType="email-address" autoCapitalize="none" />
 

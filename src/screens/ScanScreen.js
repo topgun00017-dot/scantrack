@@ -1,6 +1,7 @@
 // Scan receipts: snap a photo (or pick several) and let AI capture every line, tax and total.
 import { showAlert, isWeb, dataUrlParts } from '../platform';
 import { Icon } from '../icons';
+import CompanySwitcher from '../CompanySwitcher';
 import React, { useState } from 'react';
 import { Alert, Image, ScrollView, Text, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
@@ -102,6 +103,7 @@ export default function ScanScreen({ nav }) {
     <ScrollView contentContainerStyle={{ paddingBottom: 32 }}>
       <Header title="Scan" />
       <View style={{ paddingHorizontal: 16 }}>
+        <CompanySwitcher label="Save to" onManage={() => nav.push('settings')} style={{ marginBottom: 12 }} />
         <Card style={{ alignItems: 'center', paddingVertical: 36 }}>
           <View style={{ width: 88, height: 88, borderRadius: 44, backgroundColor: colors.accent + '33', alignItems: 'center', justifyContent: 'center' }}><Icon name="scan" size={44} color={colors.accentInk} /></View>
           <Text style={[s.h2, { marginTop: 12 }]}>Capture a receipt</Text>

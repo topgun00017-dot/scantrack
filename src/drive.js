@@ -68,7 +68,7 @@ export async function signOut() {
   const g = lib();
   if (g) await g.GoogleSignin.signOut().catch(() => {});
   cache.clear();
-  sheetId = null;
+  for (const k of Object.keys(sheetIds)) delete sheetIds[k];
 }
 
 // The Google account this user connected. On a shared phone another user's account may still be
@@ -78,7 +78,7 @@ export function setExpectedAccount(email) {
   if (email !== expectedEmail) {
     expectedEmail = email || null;
     cache.clear();
-    sheetId = null;
+    for (const k of Object.keys(sheetIds)) delete sheetIds[k];
   }
 }
 
@@ -133,10 +133,21 @@ async function folder(tok, name, parent) {
   return id;
 }
 
+// Each company gets its own folder: ScanTrack Receipts / <company> / <year> / <month>.
+let companyName = null;
+export function setCompany(name) {
+  companyName = name ? safe(name).slice(0, 80) : null;
+}
+
+async function companyFolder(tok) {
+  const root = await folder(tok, ROOT_NAME);
+  return companyName ? folder(tok, companyName, root) : root;
+}
+
 async function monthFolder(tok, date) {
   const [y, m] = (date || '').split('-');
-  const root = await folder(tok, ROOT_NAME);
-  const year = await folder(tok, y || 'Undated', root);
+  const base = await companyFolder(tok);
+  const year = await folder(tok, y || 'Undated', base);
   const mi = Number(m) - 1;
   return folder(tok, mi >= 0 && mi < 12 ? `${m} - ${MONTHS[mi]}` : 'Undated', year);
 }
@@ -211,11 +222,13 @@ export async function trashFile(fileId) {
 }
 
 // Keep a Google Sheet listing every receipt in the ScanTrack Receipts folder.
-let sheetId = null;
+const sheetIds = {}; // per company
 export async function updateSheet(receipts) {
   const tok = await token();
-  const root = await folder(tok, ROOT_NAME);
+  const root = await companyFolder(tok);
   const csv = buildCSV(receipts);
+  const ck = companyName || '_';
+  let sheetId = sheetIds[ck] || null;
   if (!sheetId) {
     const query = `name='${q(SHEET_NAME)}' and trashed=false and '${root}' in parents`;
     const found = await api(tok, `${API}?q=${encodeURIComponent(query)}&fields=files(id)&spaces=drive`);
@@ -224,6 +237,7 @@ export async function updateSheet(receipts) {
   if (sheetId) {
     try {
       await api(tok, `${UPLOAD}/${sheetId}?uploadType=media&fields=id`, { method: 'PATCH', headers: { 'content-type': 'text/csv' }, body: csv });
+      sheetIds[ck] = sheetId;
       return;
     } catch (e) {
       if (e.status !== 404) throw e;
@@ -236,5 +250,5 @@ export async function updateSheet(receipts) {
     JSON.stringify({ name: SHEET_NAME, mimeType: 'application/vnd.google-apps.spreadsheet', parents: [root] }) +
     `\r\n--${b}\r\nContent-Type: text/csv; charset=UTF-8\r\n\r\n${csv}\r\n--${b}--`;
   const made = await api(tok, `${UPLOAD}?uploadType=multipart&fields=id`, { method: 'POST', headers: { 'content-type': `multipart/related; boundary=${b}` }, body });
-  sheetId = made.id;
+  sheetIds[ck] = made.id;
 }

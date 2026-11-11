@@ -7,8 +7,7 @@ import { StoreProvider, useStore } from './src/store';
 import { colors } from './src/theme';
 import DialogHost from './src/DialogHost';
 import ToastHost from './src/Toast';
-import { ProfilesProvider, useProfiles } from './src/profiles';
-import ProfilesScreen from './src/screens/ProfilesScreen';
+import { CompaniesProvider, useCompanies } from './src/companies';
 
 import HomeScreen from './src/screens/HomeScreen';
 import ReceiptsScreen from './src/screens/ReceiptsScreen';
@@ -41,9 +40,8 @@ const STACK = {
   agent: AgentScreen,
 };
 
-function Shell() {
+function Shell({ tab, setTab }) {
   const { ready } = useStore();
-  const [tab, setTab] = useState('home');
   const [stack, setStack] = useState([]); // [{ name, params }]
   const [tabParams, setTabParams] = useState({}); // e.g. the period Insights should open on
 
@@ -101,20 +99,20 @@ function Shell() {
   );
 }
 
-// Ask who is using the app, then load only that person's data. key={id} gives each user a fresh store.
+// Load the selected company's data. key={id} gives each company a fresh store when switching.
 function Gate() {
-  const { ready, unlocked, active } = useProfiles();
-  if (!ready) {
+  const { ready, active } = useCompanies();
+  const [tab, setTab] = useState('home'); // kept here so switching company stays on the same tab
+  if (!ready || !active) {
     return (
       <View style={[styles.fill, { alignItems: 'center', justifyContent: 'center' }]}>
         <ActivityIndicator color={colors.accent} size="large" />
       </View>
     );
   }
-  if (!unlocked || !active) return <ProfilesScreen />;
   return (
-    <StoreProvider key={active.id} dataKey={active.dataKey} withSamples={!!active.first} userName={active.first ? '' : active.name}>
-      <Shell />
+    <StoreProvider key={active.id} dataKey={active.dataKey} withSamples={!!active.first} companyName={active.first ? '' : active.name} folderName={active.name}>
+      <Shell tab={tab} setTab={setTab} />
     </StoreProvider>
   );
 }
@@ -122,12 +120,12 @@ function Gate() {
 export default function App() {
   return (
     <SafeAreaProvider>
-      <ProfilesProvider>
+      <CompaniesProvider>
         <StatusBar style="dark" />
         <Gate />
         <ToastHost />
         <DialogHost />
-      </ProfilesProvider>
+      </CompaniesProvider>
     </SafeAreaProvider>
   );
 }

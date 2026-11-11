@@ -1,5 +1,6 @@
 // Insights: spending by category for one or more months or the year, shown as a doughnut,
 // pie or bar graph. Tap a category (in the list or on the chart) to highlight it.
+import CompanySwitcher from '../CompanySwitcher';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import Svg, { Circle, G, Path } from 'react-native-svg';
@@ -148,6 +149,7 @@ export default function InsightsScreen({ nav, params }) {
     <View style={{ flex: 1 }}>
       <Header title="Insights" subtitle="Where your money goes" />
       <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 32 }}>
+        <CompanySwitcher onManage={() => nav.push('settings')} style={{ marginBottom: 8 }} />
         <PeriodPicker period={period} onChange={(p) => { setPeriod(p); setSlice(null); }} />
 
         <View style={{ flexDirection: 'row', gap: 10, marginTop: 12 }}>

@@ -7,6 +7,7 @@ import { CATEGORY_KEYS, OTHERS, autoCategorize, migrateCategory, setCustomCatego
 import { webSample, hasKey } from './ai';
 import { isWeb } from './platform';
 import * as Drive from './drive';
+import { APP_KEYS, omit, pick, useCompanies } from './companies';
 
 
 const DEFAULT_SETTINGS = {
@@ -68,13 +69,34 @@ function demoReceipts() {
 
 const Ctx = createContext(null);
 
-// dataKey: where this user's data is saved. withSamples: load the sample receipts on a fresh start
-// (only for the first user). userName: pre-fills "Your name" for a new user.
-export function StoreProvider({ children, dataKey = 'scantrack:v1', withSamples = true, userName = '' }) {
+// One company's data. dataKey: where it is saved. withSamples: load the sample receipts on a fresh
+// start (first company only). companyName: pre-fills the company name on a new company's reports.
+// `settings` seen by screens = this company's details + the app-wide settings shared by all companies.
+export function StoreProvider({ children, dataKey = 'scantrack:v1', withSamples = true, companyName = '', folderName = null }) {
   const [ready, setReady] = useState(false);
   const [receipts, setReceipts] = useState([]);
   const [reports, setReports] = useState([]);
-  const [settings, setSettings] = useState(DEFAULT_SETTINGS);
+  const [companySettings, setCompanySettings] = useState(() => omit(DEFAULT_SETTINGS, APP_KEYS));
+  const { appSettings, setAppSettings } = useCompanies();
+  const settings = useMemo(
+    () => ({ ...DEFAULT_SETTINGS, ...companySettings, company: companySettings.company || folderName || '', ...pick(appSettings, APP_KEYS) }),
+    [companySettings, appSettings, folderName]
+  );
+  // Accepts a patch or (current settings) => new settings, and saves each key where it belongs.
+  const setSettings = useCallback(
+    (patchOrFn) => {
+      const cur = latestSettings.current;
+      const next = typeof patchOrFn === 'function' ? patchOrFn(cur) : { ...cur, ...patchOrFn };
+      const app = pick(next, APP_KEYS);
+      const comp = omit(next, APP_KEYS);
+      latestSettings.current = { ...cur, ...next };
+      setAppSettings((a) => ({ ...a, ...app }));
+      setCompanySettings((c) => ({ ...c, ...comp }));
+    },
+    [setAppSettings]
+  );
+  const latestSettings = useRef(settings);
+  latestSettings.current = settings;
   const [webAI, setWebAI] = useState(false);
   const [driveTrash, setDriveTrash] = useState([]); // Drive file ids of deleted receipts, to move to the Drive bin
   const [driveStatus, setDriveStatus] = useState({ syncing: false, lastSync: null, error: null });
@@ -95,10 +117,10 @@ export function StoreProvider({ children, dataKey = 'scantrack:v1', withSamples 
           setReceipts((s.receipts || []).map((r) => ({ ...r, category: migrateCategory(r) })));
           setReports(s.reports || []);
           setDriveTrash(s.driveTrash || []);
-          setSettings({ ...DEFAULT_SETTINGS, ...(s.settings || {}) });
+          setCompanySettings({ ...omit(DEFAULT_SETTINGS, APP_KEYS), ...omit(s.settings, APP_KEYS) });
         } else {
           if (withSamples) setReceipts(demoReceipts());
-          if (userName) setSettings((st) => ({ ...st, name: userName }));
+          if (companyName) setCompanySettings((st) => ({ ...st, company: companyName }));
         }
       } catch (e) {
         console.warn('load failed', e);
@@ -110,8 +132,8 @@ export function StoreProvider({ children, dataKey = 'scantrack:v1', withSamples 
 
   useEffect(() => {
     if (!loaded.current) return;
-    AsyncStorage.setItem(dataKey, JSON.stringify({ receipts, reports, settings, driveTrash })).catch(() => {});
-  }, [receipts, reports, settings, driveTrash]);
+    AsyncStorage.setItem(dataKey, JSON.stringify({ receipts, reports, settings: companySettings, driveTrash })).catch(() => {});
+  }, [receipts, reports, companySettings, driveTrash]);
 
   // ---------- Google Drive auto-save ----------
   // Every add/edit sets driveDirty and bumps _rev; the sync uploads dirty receipts and clears the
@@ -228,6 +250,11 @@ export function StoreProvider({ children, dataKey = 'scantrack:v1', withSamples 
         setReports((rs) => rs.map((rep) => ({ ...rep, receiptIds: rep.receiptIds.filter((x) => x !== id) })));
       },
       clearDemo: () => setReceipts((list) => list.filter((r) => !r.demo)),
+      // Take a receipt out of this company without deleting its photo or Drive copy (it moved to another company).
+      detachReceipt: (id) => {
+        setReceipts((list) => list.filter((x) => x.id !== id));
+        setReports((rs) => rs.map((rep) => ({ ...rep, receiptIds: rep.receiptIds.filter((x) => x !== id) })));
+      },
       addReport: (rep) => {
         const r = { id: uid(), createdAt: Date.now(), status: 'draft', ...rep };
         setReports((list) => [r, ...list]);
@@ -241,6 +268,7 @@ export function StoreProvider({ children, dataKey = 'scantrack:v1', withSamples 
 
   setCustomCategories(settings.customCategories || []);
   Drive.setExpectedAccount(settings.driveEnabled ? settings.driveEmail : null);
+  Drive.setCompany(folderName);
 
   // Add a category of the user's own. Returns its name, or throws if the name is empty or taken.
   const addCategory = useCallback(({ name, icon, color }) => {

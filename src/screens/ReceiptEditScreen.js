@@ -9,6 +9,9 @@ import { Button, Card, Chip, Field, Header, SectionTitle, s } from '../component
 import { colors } from '../theme';
 import { CATEGORIES, autoCategorize } from '../categories';
 import CategoryEditor from '../CategoryEditor';
+import { useCompanies } from '../companies';
+import { CompanyDot } from '../CompanySwitcher';
+import { Icon } from '../icons';
 import { showToast } from '../Toast';
 import { findDuplicate, money, prettyDate } from '../utils';
 
@@ -20,7 +23,7 @@ const num = (v) => {
 export default function ReceiptEditScreen({ nav, params }) {
   const bottomInset = useSafeAreaInsets().bottom; // clear Android's navigation bar
   const keyboard = useKeyboardHeight(); // Android: lift content above the on-screen keyboard
-  const { receipts, addReceipt, updateReceipt, deleteReceipt, settings } = useStore();
+  const { receipts, addReceipt, updateReceipt, deleteReceipt, detachReceipt, settings } = useStore();
   const existing = params.id ? receipts.find((r) => r.id === params.id) : null;
   const src = existing || params.draft || {};
   const isNew = !existing;
@@ -41,6 +44,10 @@ export default function ReceiptEditScreen({ nav, params }) {
   const [tagInput, setTagInput] = useState('');
   const [zoom, setZoom] = useState(false);
   const [catEditor, setCatEditor] = useState(false);
+  const { companies, active: company, sendReceiptTo } = useCompanies();
+  const [targetId, setTargetId] = useState(company?.id); // company this receipt is saved to
+  const [companyPick, setCompanyPick] = useState(false);
+  const target = companies.find((c) => c.id === targetId) || company;
   const set = (k) => (v) => setF((x) => ({ ...x, [k]: v }));
 
   const itemsTotal = f.lineItems.reduce((acc, i) => acc + num(i.amount), 0);
@@ -79,6 +86,20 @@ export default function ReceiptEditScreen({ nav, params }) {
       status: total > 0 ? 'processed' : 'needs_review',
       imageUri: src.imageUri || null,
     };
+    // Saving into another company: write it to that company and take it out of this one.
+    if (target && company && target.id !== company.id) {
+      const full = isNew
+        ? { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 8), createdAt: Date.now(), ...rec }
+        : { ...existing, ...rec };
+      sendReceiptTo(target.id, full)
+        .then(() => {
+          if (!isNew) detachReceipt(existing.id);
+          nav.back();
+          showToast({ title: isNew ? `Saved to ${target.name}` : `Moved to ${target.name}`, text: `${full.merchant} · ${money(full.total, full.currency)} · ${full.category}` });
+        })
+        .catch((e) => showAlert('Could not save', e.message));
+      return;
+    }
     const commit = (r) => {
       if (isNew) addReceipt(r);
       else updateReceipt(existing.id, r);
@@ -141,6 +162,38 @@ export default function ReceiptEditScreen({ nav, params }) {
             <Text style={[s.sub, { marginTop: 4 }]}>A receipt from {dup.merchant} on {prettyDate(dup.date)} for {money(dup.total, dup.currency)} already exists. You'll be asked to confirm when you save.</Text>
           </Card>
         )}
+
+        {companies.length > 1 && (
+          <Pressable
+            onPress={() => setCompanyPick(true)}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.surface, borderRadius: 12, borderWidth: 1, borderColor: target?.id !== company?.id ? colors.accent : colors.border, padding: 12, marginTop: 12 }}
+          >
+            <CompanyDot color={target?.color} size={12} />
+            <View style={{ flex: 1 }}>
+              <Text style={s.sub}>{isNew ? 'Save to company' : target?.id !== company?.id ? 'Will move to company' : 'Company'}</Text>
+              <Text style={[s.body, { fontWeight: '700' }]} numberOfLines={1}>{target?.name}</Text>
+            </View>
+            <Text style={{ color: colors.accentInk, fontWeight: '700' }}>Change</Text>
+          </Pressable>
+        )}
+        <Modal visible={companyPick} transparent animationType="fade" onRequestClose={() => setCompanyPick(false)}>
+          <Pressable style={{ flex: 1, backgroundColor: '#0008', justifyContent: 'center', padding: 24 }} onPress={() => setCompanyPick(false)}>
+            <Pressable style={{ backgroundColor: colors.surface, borderRadius: 18, paddingVertical: 8 }} onPress={() => {}}>
+              <Text style={[s.h2, { paddingHorizontal: 16, paddingVertical: 10 }]}>{isNew ? 'Save to company' : 'Move to company'}</Text>
+              {companies.map((c) => (
+                <Pressable
+                  key={c.id}
+                  onPress={() => { setTargetId(c.id); setCompanyPick(false); }}
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 13, paddingHorizontal: 16, backgroundColor: c.id === targetId ? colors.surface2 : 'transparent' }}
+                >
+                  <CompanyDot color={c.color} size={12} />
+                  <Text style={[s.body, { flex: 1 }]} numberOfLines={1}>{c.name}{c.id === company?.id ? '  (current)' : ''}</Text>
+                  {c.id === targetId && <Icon name="check" size={18} color={colors.accentInk} />}
+                </Pressable>
+              ))}
+            </Pressable>
+          </Pressable>
+        </Modal>
 
         <SectionTitle>Details</SectionTitle>
         <Field label="Merchant" value={f.merchant} onChangeText={(v) => { set('merchant')(v); if (isNew && f.category === 'Others') set('category')(autoCategorize(v)); }} placeholder="e.g. Petronas Klang" />

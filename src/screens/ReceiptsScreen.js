@@ -1,6 +1,7 @@
 // Organize receipts: search, filter, tag and bulk-export from one tidy archive.
 import { showAlert } from '../platform';
 import { Icon } from '../icons';
+import CompanySwitcher from '../CompanySwitcher';
 import React, { useMemo, useState } from 'react';
 import { Alert, FlatList, Modal, Pressable, Text, TextInput, View } from 'react-native';
 import { useStore } from '../store';
@@ -49,6 +50,7 @@ export default function ReceiptsScreen({ nav }) {
         right={selecting ? <Text style={{ color: colors.accentInk, fontWeight: '700' }} onPress={() => setSelected([])}>Cancel</Text> : <Text style={{ color: colors.accentInk, fontWeight: '700' }} onPress={() => setSelected(list.map((r) => r.id))}>Select</Text>}
       />
       <View style={{ paddingHorizontal: 16 }}>
+        <CompanySwitcher onManage={() => nav.push('settings')} style={{ marginBottom: 10 }} />
         <View style={{ justifyContent: 'center' }}>
           <TextInput
           value={query}
