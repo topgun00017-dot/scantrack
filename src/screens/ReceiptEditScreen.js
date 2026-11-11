@@ -8,6 +8,7 @@ import { Button, Card, Chip, Field, Header, SectionTitle, s } from '../component
 import { colors } from '../theme';
 import { CATEGORIES, autoCategorize } from '../categories';
 import CategoryEditor from '../CategoryEditor';
+import { showToast } from '../Toast';
 import { findDuplicate, money, prettyDate } from '../utils';
 
 const num = (v) => {
@@ -80,6 +81,10 @@ export default function ReceiptEditScreen({ nav, params }) {
       if (isNew) addReceipt(r);
       else updateReceipt(existing.id, r);
       nav.back();
+      showToast({
+        title: isNew ? 'Receipt saved' : 'Changes saved',
+        text: `${r.merchant} · ${money(r.total, r.currency)} · ${r.category}${settings.driveEnabled ? ' · backing up to Google Drive' : ''}`,
+      });
     };
     // Same date and amount at a similar-named shop: ask before saving a second copy.
     const twin = findDuplicate(receipts, { ...rec, confirmedUnique: existing?.confirmedUnique }, existing?.id);

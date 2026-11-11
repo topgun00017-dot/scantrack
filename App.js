@@ -6,6 +6,7 @@ import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { StoreProvider, useStore } from './src/store';
 import { colors } from './src/theme';
 import DialogHost from './src/DialogHost';
+import ToastHost from './src/Toast';
 
 import HomeScreen from './src/screens/HomeScreen';
 import ReceiptsScreen from './src/screens/ReceiptsScreen';
@@ -102,6 +103,7 @@ export default function App() {
       <StoreProvider>
         <StatusBar style="dark" />
         <Shell />
+        <ToastHost />
         <DialogHost />
       </StoreProvider>
     </SafeAreaProvider>
