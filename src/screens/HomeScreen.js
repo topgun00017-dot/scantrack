@@ -69,7 +69,7 @@ export default function HomeScreen({ nav }) {
         </Card>
 
         <SectionTitle right={<Text style={{ color: colors.accentInk, fontWeight: '700' }} onPress={() => nav.tab('receipts')}>See all</Text>}>Recent</SectionTitle>
-        {list.slice(0, 5).map((r) => <ReceiptRow key={r.id} r={r} onPress={() => nav.push('receipt', { id: r.id })} />)}
+        {list.slice(0, 5).map((r) => <ReceiptRow key={r.id} r={r} onPress={() => nav.push('receipt', { id: r.id, ids: list.map((x) => x.id) })} />)}
         {list.length === 0 && <Button title="Scan your first receipt" icon="camera" onPress={openCamera} />}
       </View>
 

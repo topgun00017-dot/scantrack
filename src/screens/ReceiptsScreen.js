@@ -155,7 +155,7 @@ export default function ReceiptsScreen({ nav }) {
           <ReceiptRow
             r={item}
             selected={selected.includes(item.id)}
-            onPress={() => (selecting ? toggle(item.id) : nav.push('receipt', { id: item.id }))}
+            onPress={() => (selecting ? toggle(item.id) : nav.push('receipt', { id: item.id, ids: list.map((x) => x.id) }))}
             onLongPress={() => toggle(item.id)}
           />
         )}

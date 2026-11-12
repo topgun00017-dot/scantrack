@@ -85,7 +85,7 @@ export default function ReportDetailScreen({ nav, params }) {
         ))}
 
         <SectionTitle>Receipts</SectionTitle>
-        {list.map((r) => <ReceiptRow key={r.id} r={r} onPress={() => nav.push('receipt', { id: r.id })} />)}
+        {list.map((r) => <ReceiptRow key={r.id} r={r} onPress={() => nav.push('receipt', { id: r.id, ids: list.map((x) => x.id) })} />)}
       </ScrollView>
     </View>
   );

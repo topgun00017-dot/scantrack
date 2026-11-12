@@ -2,8 +2,8 @@
 import { showAlert } from '../platform';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useKeyboardHeight } from '../useKeyboard';
-import React, { useMemo, useState } from 'react';
-import { Alert, Image, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Text, TextInput, View, useWindowDimensions } from 'react-native';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Alert, Animated, Image, KeyboardAvoidingView, Modal, PanResponder, Platform, Pressable, ScrollView, Text, TextInput, View, useWindowDimensions } from 'react-native';
 import { useStore } from '../store';
 import { Button, Card, Chip, DOUBT, Field, Header, SectionTitle, s } from '../components';
 import { colors } from '../theme';
@@ -55,7 +55,75 @@ export default function ReceiptEditScreen({ nav, params }) {
     setF((x) => ({ ...x, [k]: v }));
     if (doubt.has(k)) setDoubt((d) => new Set([...d].filter((x) => x !== k)));
   };
-  const { height: screenH } = useWindowDimensions();
+  const { height: screenH, width: screenW } = useWindowDimensions();
+
+  // ---------- swipe left / right to the next / previous receipt (order of the list it was opened from)
+  const order = params.ids || [];
+  const pos = existing ? order.indexOf(existing.id) : -1;
+  const prevId = pos > 0 ? order[pos - 1] : null;
+  const nextId = pos >= 0 && pos < order.length - 1 ? order[pos + 1] : null;
+  const initialForm = useRef(JSON.stringify(f));
+  const live = useRef({});
+  live.current = { f, prevId, nextId };
+  const pan = useRef(new Animated.Value(params.from === 'next' ? screenW * 0.35 : params.from === 'prev' ? -screenW * 0.35 : 0)).current;
+  useEffect(() => {
+    Animated.spring(pan, { toValue: 0, useNativeDriver: true, friction: 9 }).start();
+  }, []);
+  const goTo = (id, dir) => nav.replace('receipt', { id, ids: order, from: dir });
+  const tryGo = (dir) => {
+    const id = dir === 'next' ? live.current.nextId : live.current.prevId;
+    if (!id) return Animated.spring(pan, { toValue: 0, useNativeDriver: true }).start();
+    const leave = () =>
+      Animated.timing(pan, { toValue: dir === 'next' ? -screenW : screenW, duration: 160, useNativeDriver: true }).start(() => goTo(id, dir));
+    if (JSON.stringify(live.current.f) !== initialForm.current) {
+      Animated.spring(pan, { toValue: 0, useNativeDriver: true }).start();
+      return showAlert('Unsaved changes', 'Move to the other receipt without saving your changes here?', [
+        { text: 'Stay', style: 'cancel' },
+        { text: 'Discard changes', style: 'destructive', onPress: leave },
+      ]);
+    }
+    leave();
+  };
+  const tryGoRef = useRef(tryGo);
+  tryGoRef.current = tryGo;
+  // Track the finger ourselves from where it first touched down: steadier than gestureState on every platform.
+  const touch = useRef({ x: 0, y: 0, t: 0, dx: 0 });
+  const delta = (e) => {
+    const { pageX, pageY } = e.nativeEvent;
+    if (pageX == null) return { dx: touch.current.dx, dy: 0 }; // some platforms send no position on lift-off
+    return { dx: pageX - touch.current.x, dy: pageY - touch.current.y };
+  };
+  const isSwipe = (e) => {
+    const { dx, dy } = delta(e);
+    return order.length > 1 && Math.abs(dx) > 20 && Math.abs(dx) > Math.abs(dy) * 2;
+  };
+  const swipe = useMemo(
+    () =>
+      PanResponder.create({
+        onStartShouldSetPanResponderCapture: (e) => {
+          touch.current = { x: e.nativeEvent.pageX, y: e.nativeEvent.pageY, t: Date.now(), dx: 0 };
+          return false; // let taps and scrolling through
+        },
+        onMoveShouldSetPanResponderCapture: (e) => isSwipe(e),
+        onMoveShouldSetPanResponder: (e) => isSwipe(e),
+        onPanResponderTerminationRequest: () => false, // keep the swipe once it has started
+        onPanResponderMove: (e) => {
+          const { dx } = delta(e);
+          touch.current.dx = dx;
+          const blocked = (dx < 0 && !live.current.nextId) || (dx > 0 && !live.current.prevId);
+          pan.setValue(blocked ? dx * 0.2 : dx); // resist at the first / last receipt
+        },
+        onPanResponderRelease: (e) => {
+          const { dx } = delta(e);
+          const v = dx / Math.max(1, Date.now() - touch.current.t); // px per ms
+          if (dx < -80 || (dx < -30 && v < -0.6)) tryGoRef.current('next');
+          else if (dx > 80 || (dx > 30 && v > 0.6)) tryGoRef.current('prev');
+          else Animated.spring(pan, { toValue: 0, useNativeDriver: true }).start();
+        },
+        onPanResponderTerminate: () => Animated.spring(pan, { toValue: 0, useNativeDriver: true }).start(),
+      }),
+    []
+  );
 
   const itemsTotal = f.lineItems.reduce((acc, i) => acc + num(i.amount), 0);
   const dup = useMemo(
@@ -144,8 +212,22 @@ export default function ReceiptEditScreen({ nav, params }) {
   const setItem = (i, k, v) => set('lineItems')(f.lineItems.map((it, idx) => (idx === i ? { ...it, [k]: v } : it)));
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <KeyboardAvoidingView style={{ flex: 1, overflow: 'hidden' }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <Header title={isNew ? 'Review receipt' : 'Receipt'} onBack={nav.back} right={!isNew && <Text style={{ color: colors.danger, fontWeight: '700' }} onPress={remove}>Delete</Text>} />
+      {pos >= 0 && order.length > 1 && (
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, marginTop: -6, marginBottom: 8 }}>
+          <Pressable hitSlop={10} disabled={!prevId} onPress={() => tryGo('prev')} style={{ flexDirection: 'row', alignItems: 'center', opacity: prevId ? 1 : 0.3 }}>
+            <Icon name="chevron-left" size={18} color={colors.accentInk} />
+            <Text style={{ color: colors.accentInk, fontWeight: '700' }}>Previous</Text>
+          </Pressable>
+          <Text style={s.sub}>{pos + 1} of {order.length} · swipe to browse</Text>
+          <Pressable hitSlop={10} disabled={!nextId} onPress={() => tryGo('next')} style={{ flexDirection: 'row', alignItems: 'center', opacity: nextId ? 1 : 0.3 }}>
+            <Text style={{ color: colors.accentInk, fontWeight: '700' }}>Next</Text>
+            <Icon name="chevron-right" size={18} color={colors.accentInk} />
+          </Pressable>
+        </View>
+      )}
+      <Animated.View style={{ flex: 1, transform: [{ translateX: pan }] }} {...swipe.panHandlers}>
       {/* split view: the receipt photo stays on top, the fields scroll below it */}
       {src.imageUri && !keyboard ? (
         <Pressable onPress={() => setZoom(true)} style={{ height: Math.round(screenH * 0.3), marginHorizontal: 16, borderRadius: 14, overflow: 'hidden', backgroundColor: '#111827' }}>
@@ -259,6 +341,8 @@ export default function ReceiptEditScreen({ nav, params }) {
 
         <Button title={isNew ? 'Save receipt' : f.status === 'needs_review' ? 'Save & mark reviewed' : 'Save changes'} onPress={save} style={{ marginTop: 20 }} />
       </ScrollView>
+
+      </Animated.View>
 
       <CategoryEditor visible={catEditor} onClose={() => setCatEditor(false)} onCreated={(key) => set('category')(key)} />
 

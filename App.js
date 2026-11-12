@@ -74,7 +74,7 @@ function Shell({ tab, setTab }) {
   return (
     <SafeAreaView style={styles.fill} edges={['top', 'left', 'right']}>
       <View style={{ flex: 1 }}>
-        {StackComp ? <StackComp key={stack.length} nav={nav} params={top.params} /> : <TabComp nav={nav} params={tabParams[tab]} />}
+        {StackComp ? <StackComp key={`${stack.length}:${top.params?.id || ''}`} nav={nav} params={top.params} /> : <TabComp nav={nav} params={tabParams[tab]} />}
       </View>
       {!StackComp && (
         <SafeAreaView edges={['bottom']} style={styles.tabbar}>
