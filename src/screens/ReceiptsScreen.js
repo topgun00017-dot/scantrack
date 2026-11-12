@@ -10,8 +10,19 @@ import { colors } from '../theme';
 import { CATEGORIES } from '../categories';
 import { allTags, filterReceipts, money, sum } from '../utils';
 
+const byName = (a, b) => (a.merchant || '').localeCompare(b.merchant || '', undefined, { sensitivity: 'base' }) || (a.date < b.date ? 1 : -1);
+const SORTS = [
+  { key: 'az', label: 'Shop name A–Z', short: 'A–Z', fn: byName },
+  { key: 'za', label: 'Shop name Z–A', short: 'Z–A', fn: (a, b) => byName(b, a) },
+  { key: 'newest', label: 'Newest first', short: 'Newest', fn: (a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : (b.createdAt || 0) - (a.createdAt || 0)) },
+  { key: 'oldest', label: 'Oldest first', short: 'Oldest', fn: (a, b) => (a.date > b.date ? 1 : a.date < b.date ? -1 : (a.createdAt || 0) - (b.createdAt || 0)) },
+  { key: 'amount', label: 'Highest amount', short: 'Amount', fn: (a, b) => (Number(b.total) || 0) - (Number(a.total) || 0) },
+];
+
 export default function ReceiptsScreen({ nav }) {
-  const { receipts, updateMany, deleteReceipt, settings } = useStore();
+  const { receipts, updateMany, deleteReceipt, settings, setSettings } = useStore();
+  const sortBy = SORTS.find((x) => x.key === settings.receiptSort) || SORTS[0];
+  const [sortOpen, setSortOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState(null);
   const [tag, setTag] = useState(null);
@@ -23,8 +34,8 @@ export default function ReceiptsScreen({ nav }) {
 
   const tags = useMemo(() => allTags(receipts), [receipts]);
   const list = useMemo(
-    () => filterReceipts(receipts, { query, category, tag, status: onlyReview ? 'needs_review' : null }),
-    [receipts, query, category, tag, onlyReview]
+    () => [...filterReceipts(receipts, { query, category, tag, status: onlyReview ? 'needs_review' : null })].sort(sortBy.fn),
+    [receipts, query, category, tag, onlyReview, sortBy]
   );
   const selecting = selected.length > 0;
   const toggle = (id) => setSelected((x) => (x.includes(id) ? x.filter((y) => y !== id) : [...x, id]));
@@ -62,13 +73,14 @@ export default function ReceiptsScreen({ nav }) {
         />
           <View pointerEvents="none" style={{ position: 'absolute', left: 14 }}><Icon name="search" size={18} color={colors.faint} /></View>
         </View>
-        {/* category drop-down: All / Needs review / each category */}
+        {/* category drop-down (All / Needs review / each category) and sort */}
+        <View style={{ flexDirection: 'row', gap: 8, marginTop: 10 }}>
         {(() => {
           const m = CATEGORIES.find((c) => c.key === category);
           return (
             <Pressable
               onPress={() => setCatOpen(true)}
-              style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.surface, borderRadius: 12, borderWidth: 1, borderColor: category || onlyReview ? colors.accent : colors.border, paddingVertical: 12, paddingHorizontal: 14, marginTop: 10, opacity: pressed ? 0.7 : 1 })}
+              style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.surface, borderRadius: 12, borderWidth: 1, borderColor: category || onlyReview ? colors.accent : colors.border, paddingVertical: 12, paddingHorizontal: 14, flex: 1, opacity: pressed ? 0.7 : 1 })}
             >
               <Icon name={m ? m.icon : onlyReview ? 'alert' : 'shapes'} size={18} color={m ? m.color : onlyReview ? colors.warning : colors.accentInk} />
               <Text style={[s.sub, { fontSize: 13 }]}>Category</Text>
@@ -77,6 +89,31 @@ export default function ReceiptsScreen({ nav }) {
             </Pressable>
           );
         })()}
+          <Pressable
+            onPress={() => setSortOpen(true)}
+            style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: colors.surface, borderRadius: 12, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 12, opacity: pressed ? 0.7 : 1 })}
+          >
+            <Text style={[s.body, { fontWeight: '700' }]}>{sortBy.short}</Text>
+            <Icon name="chevron-down" size={16} color={colors.muted} />
+          </Pressable>
+        </View>
+        <Modal visible={sortOpen} transparent animationType="fade" onRequestClose={() => setSortOpen(false)}>
+          <Pressable style={{ flex: 1, backgroundColor: '#0008', justifyContent: 'center', padding: 24 }} onPress={() => setSortOpen(false)}>
+            <Pressable style={{ backgroundColor: colors.surface, borderRadius: 18, paddingVertical: 8 }} onPress={() => {}}>
+              <Text style={[s.h2, { paddingHorizontal: 16, paddingVertical: 10 }]}>Sort receipts</Text>
+              {SORTS.map((o) => (
+                <Pressable
+                  key={o.key}
+                  onPress={() => { setSettings({ receiptSort: o.key }); setSortOpen(false); }}
+                  style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', paddingVertical: 13, paddingHorizontal: 16, backgroundColor: sortBy.key === o.key ? colors.surface2 : pressed ? colors.bg : 'transparent' })}
+                >
+                  <Text style={[s.body, { flex: 1, fontWeight: sortBy.key === o.key ? '700' : '400' }]}>{o.label}</Text>
+                  {sortBy.key === o.key && <Icon name="check" size={18} color={colors.accentInk} />}
+                </Pressable>
+              ))}
+            </Pressable>
+          </Pressable>
+        </Modal>
         <Modal visible={catOpen} transparent animationType="fade" onRequestClose={() => setCatOpen(false)}>
           <Pressable style={{ flex: 1, backgroundColor: '#0008', justifyContent: 'center', padding: 24 }} onPress={() => setCatOpen(false)}>
             <Pressable style={{ backgroundColor: colors.surface, borderRadius: 18, paddingVertical: 8, maxHeight: '80%' }} onPress={() => {}}>
@@ -85,7 +122,7 @@ export default function ReceiptsScreen({ nav }) {
                 {[
                   { key: 'all', label: 'All', icon: 'shapes', color: colors.accentInk, on: !category && !onlyReview, count: receipts.length, pick: () => { setCategory(null); setOnlyReview(false); } },
                   { key: 'review', label: 'Needs review', icon: 'alert', color: colors.warning, on: onlyReview, count: receipts.filter((r) => r.status === 'needs_review').length, pick: () => { setCategory(null); setOnlyReview(true); } },
-                  ...CATEGORIES.map((c) => ({ key: c.key, label: c.key, icon: c.icon, color: c.color, on: category === c.key, count: receipts.filter((r) => r.category === c.key).length, pick: () => { setCategory(c.key); setOnlyReview(false); } })),
+                  ...[...CATEGORIES].sort((a, b) => (a.key === 'Others') - (b.key === 'Others') || a.key.localeCompare(b.key)).map((c) => ({ key: c.key, label: c.key, icon: c.icon, color: c.color, on: category === c.key, count: receipts.filter((r) => r.category === c.key).length, pick: () => { setCategory(c.key); setOnlyReview(false); } })),
                 ].map((o) => (
                   <Pressable
                     key={o.key}

@@ -11,7 +11,7 @@ const LEGACY_DATA_KEY = 'scantrack:v1'; // data from before companies existed â†
 const OLD_PROFILES_KEY = 'scantrack:profiles'; // short-lived multi-user build
 
 // Settings shared by every company. Everything else in `settings` is per company.
-export const APP_KEYS = ['name', 'provider', 'apiKey', 'model', 'openaiKey', 'openaiModel', 'driveEnabled', 'driveEmail', 'customCategories', 'insightsChart'];
+export const APP_KEYS = ['name', 'provider', 'apiKey', 'model', 'openaiKey', 'openaiModel', 'driveEnabled', 'driveEmail', 'customCategories', 'insightsChart', 'receiptSort'];
 export const COMPANY_COLORS = ['#F59E0B', '#3B82F6', '#10B981', '#EC4899', '#8B5CF6', '#EF4444', '#14B8A6', '#64748B'];
 
 const newId = () => 'c_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
