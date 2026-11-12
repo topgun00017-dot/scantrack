@@ -1,12 +1,11 @@
 // Full-screen receipt camera, opened from the orange button on any screen.
-// Guide frame (photo is cropped to it), Auto capture when the phone is held steady,
+// Guide frame (photo is cropped to it), photo taken only when the shutter is pressed,
 // flash, company to save to, and Upload / Scan / Manual at the bottom.
 import React, { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Image, Modal, Platform, Pressable, StatusBar, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
-import { Gyroscope } from 'expo-sensors';
 import { setCameraListener, useCapture } from './capture';
 
 // Switching company reloads that company's data (and this component); reopen the camera after.
@@ -16,9 +15,6 @@ import { Icon } from './icons';
 import { colors } from './theme';
 import { isWeb } from './platform';
 import * as ImagePicker from 'expo-image-picker';
-
-const STEADY_RATE = 0.12; // rad/s — below this the phone counts as still
-const STEADY_MS = 1300; // how long it must stay still before Auto takes the photo
 
 // Map the on-screen guide frame onto the photo (the preview fills the screen like "cover").
 function frameToPhoto(frame, view, photo) {
@@ -43,8 +39,6 @@ export default function CameraModal({ nav }) {
   const [perm, requestPerm] = useCameraPermissions();
   const [ready, setReady] = useState(false);
   const [torch, setTorch] = useState(false);
-  const [auto, setAuto] = useState(true);
-  const [steady, setSteady] = useState(0); // 0..1 progress towards auto capture
   const [shooting, setShooting] = useState(false);
   const [view, setView] = useState({ w: 0, h: 0 });
   const cam = useRef(null);
@@ -56,7 +50,6 @@ export default function CameraModal({ nav }) {
     setCameraListener(() => {
       setReady(false);
       setShooting(false);
-      setSteady(0);
       setOpen(true);
     });
     if (reopen) {
@@ -112,33 +105,6 @@ export default function CameraModal({ nav }) {
     }
   };
 
-  // Auto: take the photo once the phone has been held still for a moment.
-  useEffect(() => {
-    if (!open || !auto || !ready || shooting || busy || isWeb) {
-      setSteady(0);
-      return;
-    }
-    let since = null;
-    Gyroscope.setUpdateInterval(100);
-    const sub = Gyroscope.addListener(({ x, y, z }) => {
-      const rate = Math.sqrt(x * x + y * y + z * z);
-      const now = Date.now();
-      if (rate < STEADY_RATE) {
-        since = since || now;
-        const p = Math.min(1, (now - since) / STEADY_MS);
-        setSteady(p);
-        if (p >= 1) {
-          sub.remove();
-          shoot();
-        }
-      } else {
-        since = null;
-        setSteady(0);
-      }
-    });
-    return () => sub.remove();
-  }, [open, auto, ready, shooting, busy]);
-
   const close = () => setOpen(false);
   const goGallery = async () => {
     await fromGallery(); // progress shows over the camera; one photo opens the review form
@@ -178,9 +144,7 @@ export default function CameraModal({ nav }) {
             <Text style={{ position: 'absolute', top: frame.y + frame.h + 12, left: 0, right: 0, textAlign: 'center', color: colors.text, fontSize: 14, fontWeight: '700' }}>
               {!granted
                 ? 'Camera access is needed to scan receipts'
-                : auto && steady > 0
-                ? steady >= 1 ? 'Capturing…' : 'Hold steady…'
-                : 'Fit the receipt inside the frame'}
+                : 'Fit the receipt inside the frame, then tap the camera button'}
             </Text>
             {!aiReady && (
               <Text style={{ position: 'absolute', top: frame.y + frame.h + 34, left: 24, right: 24, textAlign: 'center', color: colors.accentInk, fontSize: 12 }}>
@@ -202,14 +166,6 @@ export default function CameraModal({ nav }) {
             <Icon name="zap" size={20} color={torch ? colors.accentText : colors.text} />
           </Pressable>
         </View>
-        <Pressable
-          onPress={() => setAuto((a) => !a)}
-          style={{ position: 'absolute', top: insets.top + 60, right: 12, flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 6, paddingHorizontal: 10, borderRadius: 999, backgroundColor: auto ? colors.accent : colors.surface, borderWidth: 1, borderColor: auto ? colors.accent : colors.border }}
-        >
-          <Icon name="scan" size={14} color={auto ? colors.accentText : colors.text} />
-          <Text style={{ color: auto ? colors.accentText : colors.text, fontWeight: '800', fontSize: 12 }}>AUTO {auto ? 'ON' : 'OFF'}</Text>
-        </Pressable>
-
         {/* bottom: shutter and Upload / Scan / Manual */}
         <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, paddingBottom: insets.bottom + 14, paddingTop: 14, backgroundColor: colors.surface, borderTopWidth: 1, borderColor: colors.border, alignItems: 'center' }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', paddingHorizontal: 36 }}>
@@ -221,9 +177,6 @@ export default function CameraModal({ nav }) {
               <View style={{ width: 62, height: 62, borderRadius: 31, backgroundColor: shooting ? colors.faint : colors.accent, alignItems: 'center', justifyContent: 'center' }}>
                 {shooting ? <ActivityIndicator color="#fff" /> : <Icon name="camera" size={26} color={colors.accentText} />}
               </View>
-              {auto && steady > 0 && !shooting && (
-                <View style={{ position: 'absolute', bottom: -6, height: 4, width: 70 * steady, backgroundColor: colors.accent, borderRadius: 2 }} />
-              )}
             </Pressable>
             <Pressable onPress={goManual} style={{ alignItems: 'center', width: 64 }}>
               <Icon name="file-text" size={26} color={colors.text} />
