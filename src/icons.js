@@ -59,6 +59,7 @@ import Shirt from 'lucide-react-native/icons/shirt';
 import Landmark from 'lucide-react-native/icons/landmark';
 import Trash2 from 'lucide-react-native/icons/trash';
 import ChartColumn from 'lucide-react-native/icons/chart-column';
+import ChartLine from 'lucide-react-native/icons/chart-line';
 import { colors } from './theme';
 
 const ICONS = {
@@ -120,6 +121,7 @@ const ICONS = {
   'landmark': Landmark,
   'trash': Trash2,
   'chart-column': ChartColumn,
+  'chart-line': ChartLine,
 };
 
 export const isIconName = (n) => typeof n === 'string' && !!ICONS[n];

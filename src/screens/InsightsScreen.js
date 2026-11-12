@@ -3,18 +3,19 @@
 import CompanySwitcher from '../CompanySwitcher';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
-import Svg, { Circle, G, Path } from 'react-native-svg';
+import Svg, { Circle, G, Line, Path, Text as SvgText } from 'react-native-svg';
 import { useStore } from '../store';
 import { Card, Header, SectionTitle, Stat, s } from '../components';
 import { Icon } from '../icons';
 import { colors, radius } from '../theme';
 import { categoryMeta } from '../categories';
-import { PeriodPicker, currentPeriod, inPeriod, periodLabel, periodRange } from '../period';
+import { MONTHS, PeriodPicker, currentPeriod, inPeriod, periodLabel, periodRange } from '../period';
 import { byCategory, filterReceipts, money, sum } from '../utils';
 
 const CHARTS = [
-  { key: 'doughnut', label: 'Doughnut', icon: 'circle' },
+  { key: 'doughnut', label: 'Donut chart', icon: 'circle' },
   { key: 'bar', label: 'Bar graph', icon: 'chart-column' },
+  { key: 'line', label: 'Line chart', icon: 'chart-line' },
 ];
 
 // ---------- doughnut ----------
@@ -93,6 +94,86 @@ function Pie({ data, total, selected, onSelect, size = 220 }) {
   );
 }
 
+// ---------- line chart ----------
+// Spending over time: by day for a single month, by month for several months or the year.
+const compact = (n) => (n >= 1000 ? `${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}k` : `${Math.round(n)}`);
+const niceMax = (v) => {
+  if (v <= 0) return 10;
+  const p = Math.pow(10, Math.floor(Math.log10(v)));
+  return [1, 2, 2.5, 5, 10].map((m) => m * p).find((m) => m >= v);
+};
+
+function buckets(period, list) {
+  const months = period.mode === 'year' ? [...Array(12).keys()] : [...(period.months || [period.month])].sort((a, b) => a - b);
+  if (period.mode !== 'year' && months.length === 1) {
+    const m = months[0];
+    const days = new Date(period.year, m + 1, 0).getDate();
+    const out = Array.from({ length: days }, (_, i) => ({ label: String(i + 1), long: `${i + 1} ${MONTHS[m]}`, total: 0 }));
+    list.forEach((r) => {
+      const d = Number((r.date || '').slice(8, 10));
+      if (d >= 1 && d <= days) out[d - 1].total += Number(r.total) || 0;
+    });
+    return { unit: 'day', points: out };
+  }
+  const out = months.map((m) => ({ label: MONTHS[m], long: `${MONTHS[m]} ${period.year}`, m, total: 0 }));
+  list.forEach((r) => {
+    const m = Number((r.date || '').slice(5, 7)) - 1;
+    const b = out.find((x) => x.m === m);
+    if (b) b.total += Number(r.total) || 0;
+  });
+  return { unit: 'month', points: out };
+}
+
+function LineChart({ period, list, selected, cur }) {
+  const [w, setW] = useState(0);
+  const all = useMemo(() => buckets(period, list), [period, list]);
+  const one = useMemo(() => (selected ? buckets(period, list.filter((r) => r.category === selected)) : null), [period, list, selected]);
+  const main = one || all;
+  const color = selected ? categoryMeta(selected).color : colors.accent;
+  const H = 190;
+  const pad = { l: 40, r: 10, t: 12, b: 24 };
+  const max = niceMax(Math.max(...all.points.map((p) => p.total)));
+  const n = main.points.length;
+  const x = (i) => pad.l + (n === 1 ? (w - pad.l - pad.r) / 2 : (i * (w - pad.l - pad.r)) / (n - 1));
+  const y = (v) => pad.t + (1 - v / max) * (H - pad.t - pad.b);
+  const path = (pts) => pts.map((p, i) => `${i ? 'L' : 'M'} ${x(i).toFixed(1)} ${y(p.total).toFixed(1)}`).join(' ');
+  const area = (pts) => `${path(pts)} L ${x(pts.length - 1).toFixed(1)} ${y(0)} L ${x(0).toFixed(1)} ${y(0)} Z`;
+  const every = all.unit === 'day' ? 5 : 1;
+  const top = main.points.reduce((a, b) => (b.total > a.total ? b : a), main.points[0]);
+
+  return (
+    <View onLayout={(e) => setW(e.nativeEvent.layout.width)} style={{ marginBottom: 8 }}>
+      {w > 0 && (
+        <Svg width={w} height={H}>
+          {[0, 0.5, 1].map((f) => (
+            <G key={f}>
+              <Line x1={pad.l} x2={w - pad.r} y1={y(max * f)} y2={y(max * f)} stroke={colors.border} strokeWidth={1} strokeDasharray={f ? '4 4' : undefined} />
+              <SvgText x={pad.l - 6} y={y(max * f) + 4} fontSize={10} fill={colors.muted} textAnchor="end">{compact(max * f)}</SvgText>
+            </G>
+          ))}
+          {selected && <Path d={path(all.points)} stroke={colors.faint} strokeWidth={1.5} fill="none" strokeDasharray="3 4" />}
+          <Path d={area(main.points)} fill={color} fillOpacity={0.14} />
+          <Path d={path(main.points)} stroke={color} strokeWidth={2.5} fill="none" strokeLinejoin="round" strokeLinecap="round" />
+          {main.points.map((p, i) =>
+            n <= 12 || p.total > 0 ? <Circle key={i} cx={x(i)} cy={y(p.total)} r={n <= 12 ? 3.5 : 2.5} fill={colors.surface} stroke={color} strokeWidth={2} /> : null
+          )}
+          {main.points.map((p, i) =>
+            i % every === 0 || i === n - 1 ? (
+              <SvgText key={'l' + i} x={x(i)} y={H - 6} fontSize={10} fill={colors.muted} textAnchor="middle">{p.label}</SvgText>
+            ) : null
+          )}
+        </Svg>
+      )}
+      <Text style={[s.sub, { textAlign: 'center', marginTop: 4 }]}>
+        {selected ? `${selected} · ` : ''}
+        {all.unit === 'day' ? 'Spending per day' : 'Spending per month'}
+        {top && top.total > 0 ? ` · highest ${top.long}: ${money(top.total, cur)}` : ''}
+      </Text>
+      {selected && <Text style={[s.sub, { textAlign: 'center', fontSize: 11 }]}>Dotted line: all categories</Text>}
+    </View>
+  );
+}
+
 // ---------- bar graph ----------
 function Bars({ data, total, selected, onSelect, cur }) {
   const max = Math.max(...data.map((d) => d.total), 1);
@@ -125,7 +206,7 @@ export default function InsightsScreen({ nav, params }) {
   const { receipts, settings, setSettings } = useStore();
   const [period, setPeriod] = useState(params?.period || currentPeriod());
   const [slice, setSlice] = useState(null);
-  const chart = settings.insightsChart === 'bar' ? 'bar' : 'doughnut'; // Pie was removed; anything else shows the doughnut
+  const chart = ['bar', 'line'].includes(settings.insightsChart) ? settings.insightsChart : 'doughnut'; // Pie was removed
   const cur = settings.currency;
 
   // Opened from Expenses' "Breakdown ›": show the months picked there.
@@ -181,6 +262,9 @@ export default function InsightsScreen({ nav, params }) {
             <Bars data={cats} total={total} selected={slice} onSelect={toggle} cur={cur} />
           ) : (
             <>
+              {chart === 'line' ? (
+                <LineChart period={period} list={list} selected={slice} cur={cur} />
+              ) : (
               <View style={{ alignItems: 'center', justifyContent: 'center', marginBottom: 6 }}>
                 {chart === 'pie' ? (
                   <Pie data={cats} total={total} selected={slice} onSelect={toggle} />
@@ -197,6 +281,7 @@ export default function InsightsScreen({ nav, params }) {
                   </View>
                 )}
               </View>
+              )}
               {chart === 'pie' && (
                 <Text style={[s.body, { textAlign: 'center', fontWeight: '700', marginBottom: 8 }]}>
                   {sel ? `${sel.category} · ${money(sel.total, cur)} · ${((sel.total / total) * 100).toFixed(1)}%` : `Total ${money(total, cur)}`}
