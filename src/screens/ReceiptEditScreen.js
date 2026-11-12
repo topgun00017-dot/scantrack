@@ -3,9 +3,9 @@ import { showAlert } from '../platform';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useKeyboardHeight } from '../useKeyboard';
 import React, { useMemo, useState } from 'react';
-import { Alert, Image, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Alert, Image, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Text, TextInput, View, useWindowDimensions } from 'react-native';
 import { useStore } from '../store';
-import { Button, Card, Chip, Field, Header, SectionTitle, s } from '../components';
+import { Button, Card, Chip, DOUBT, Field, Header, SectionTitle, s } from '../components';
 import { colors } from '../theme';
 import { CATEGORIES, autoCategorize } from '../categories';
 import CategoryEditor from '../CategoryEditor';
@@ -49,7 +49,13 @@ export default function ReceiptEditScreen({ nav, params }) {
   const [targetId, setTargetId] = useState(company?.id); // company this receipt is saved to
   const [companyPick, setCompanyPick] = useState(false);
   const target = companies.find((c) => c.id === targetId) || company;
-  const set = (k) => (v) => setF((x) => ({ ...x, [k]: v }));
+  // Fields the AI wasn't sure about (new scans only); a field stops being highlighted once edited.
+  const [doubt, setDoubt] = useState(() => new Set(isNew ? src.lowConfidence || [] : []));
+  const set = (k) => (v) => {
+    setF((x) => ({ ...x, [k]: v }));
+    if (doubt.has(k)) setDoubt((d) => new Set([...d].filter((x) => x !== k)));
+  };
+  const { height: screenH } = useWindowDimensions();
 
   const itemsTotal = f.lineItems.reduce((acc, i) => acc + num(i.amount), 0);
   const dup = useMemo(
@@ -140,13 +146,26 @@ export default function ReceiptEditScreen({ nav, params }) {
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <Header title={isNew ? 'Review receipt' : 'Receipt'} onBack={nav.back} right={!isNew && <Text style={{ color: colors.danger, fontWeight: '700' }} onPress={remove}>Delete</Text>} />
+      {/* split view: the receipt photo stays on top, the fields scroll below it */}
+      {src.imageUri && !keyboard ? (
+        <Pressable onPress={() => setZoom(true)} style={{ height: Math.round(screenH * 0.3), marginHorizontal: 16, borderRadius: 14, overflow: 'hidden', backgroundColor: '#111827' }}>
+          <Image source={{ uri: src.imageUri }} style={{ width: '100%', height: '100%' }} resizeMode="contain" />
+          <View style={{ position: 'absolute', right: 10, bottom: 10, flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: 999, paddingVertical: 5, paddingHorizontal: 10 }}>
+            <Icon name="search" size={14} color="#fff" />
+            <Text style={{ color: '#fff', fontSize: 12, fontWeight: '700' }}>Tap to zoom</Text>
+          </View>
+        </Pressable>
+      ) : null}
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 48 + bottomInset + keyboard }} keyboardShouldPersistTaps="handled">
-        {src.imageUri ? (
-          <Pressable onPress={() => setZoom(true)}>
-            <Image source={{ uri: src.imageUri }} style={{ width: '100%', height: 220, borderRadius: 14, backgroundColor: colors.surface2 }} resizeMode="cover" />
-            <Text style={[s.sub, { textAlign: 'center', marginTop: 6 }]}>Tap to view full receipt</Text>
-          </Pressable>
-        ) : null}
+        {doubt.size > 0 && (
+          <View style={{ flexDirection: 'row', gap: 10, backgroundColor: DOUBT.bg, borderWidth: 1, borderColor: DOUBT.border, borderRadius: 12, padding: 12, marginBottom: 4 }}>
+            <Icon name="alert" size={18} color={DOUBT.text} />
+            <Text style={{ color: DOUBT.text, flex: 1 }}>
+              <Text style={{ fontWeight: '800' }}>Check {doubt.size} field{doubt.size > 1 ? 's' : ''} in yellow. </Text>
+              The AI wasn't sure about {doubt.size > 1 ? 'them' : 'it'}. Compare with the photo above, then save.
+            </Text>
+          </View>
+        )}
 
         {f.status === 'needs_review' && (
           <Card style={{ marginTop: 12, borderColor: colors.warning }}>
@@ -194,19 +213,19 @@ export default function ReceiptEditScreen({ nav, params }) {
         </Modal>
 
         <SectionTitle>Details</SectionTitle>
-        <Field label="Merchant" value={f.merchant} onChangeText={(v) => { set('merchant')(v); if (isNew && f.category === 'Others') set('category')(autoCategorize(v)); }} placeholder="e.g. Petronas Klang" />
+        <Field label="Merchant" highlight={doubt.has('merchant')} value={f.merchant} onChangeText={(v) => { set('merchant')(v); if (isNew && f.category === 'Others') set('category')(autoCategorize(v)); }} placeholder="e.g. Petronas Klang" />
         <View style={{ flexDirection: 'row', gap: 10 }}>
-          <Field style={{ flex: 1 }} label="Date (YYYY-MM-DD)" value={f.date} onChangeText={set('date')} placeholder="2026-11-05" />
+          <Field style={{ flex: 1 }} label="Date (YYYY-MM-DD)" highlight={doubt.has('date')} value={f.date} onChangeText={set('date')} placeholder="2026-11-05" />
           <Field style={{ width: 90 }} label="Currency" value={f.currency} onChangeText={(v) => set('currency')(v.toUpperCase())} autoCapitalize="characters" maxLength={3} />
         </View>
         <View style={{ flexDirection: 'row', gap: 10 }}>
-          <Field style={{ flex: 1 }} label="Total" value={f.total} onChangeText={set('total')} keyboardType="decimal-pad" placeholder="0.00" />
-          <Field style={{ flex: 1 }} label="Tax (SST)" value={f.tax} onChangeText={set('tax')} keyboardType="decimal-pad" placeholder="0.00" />
+          <Field style={{ flex: 1 }} label="Total" highlight={doubt.has('total')} value={f.total} onChangeText={set('total')} keyboardType="decimal-pad" placeholder="0.00" />
+          <Field style={{ flex: 1 }} label="Tax (SST)" highlight={doubt.has('tax')} value={f.tax} onChangeText={set('tax')} keyboardType="decimal-pad" placeholder="0.00" />
         </View>
-        <Field label="Payment method" value={f.paymentMethod} onChangeText={set('paymentMethod')} placeholder="Card, Cash, TNG eWallet…" />
+        <Field label="Payment method" highlight={doubt.has('paymentMethod')} value={f.paymentMethod} onChangeText={set('paymentMethod')} placeholder="Card, Cash, TNG eWallet…" />
 
-        <SectionTitle>Category</SectionTitle>
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+        <SectionTitle>{doubt.has('category') ? 'Category · please check' : 'Category'}</SectionTitle>
+        <View style={[{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }, doubt.has('category') && { backgroundColor: DOUBT.bg, borderWidth: 1, borderColor: DOUBT.border, borderRadius: 12, padding: 8 }]}>
           {CATEGORIES.map((c) => <Chip key={c.key} icon={c.icon} iconColor={c.color} label={c.key} active={f.category === c.key} onPress={() => set('category')(c.key)} color={c.color} />)}
           <Chip icon="plus" label="New category" onPress={() => setCatEditor(true)} />
         </View>
@@ -220,7 +239,10 @@ export default function ReceiptEditScreen({ nav, params }) {
           <Button title="Add" small variant="secondary" onPress={addTag} />
         </View>
 
-        <SectionTitle right={<Text style={s.sub}>Items sum {money(itemsTotal, f.currency)}</Text>}>Line items</SectionTitle>
+        <SectionTitle right={<Text style={[s.sub, doubt.has('lineItems') && { color: DOUBT.text, fontWeight: '700' }]}>Items sum {money(itemsTotal, f.currency)}</Text>}>
+          {doubt.has('lineItems') ? "Line items · don't add up, please check" : 'Line items'}
+        </SectionTitle>
+        <View style={doubt.has('lineItems') ? { backgroundColor: DOUBT.bg, borderWidth: 1, borderColor: DOUBT.border, borderRadius: 12, padding: 8, paddingBottom: 0, marginBottom: 8 } : null}>
         {f.lineItems.map((it, i) => (
           <View key={i} style={{ flexDirection: 'row', gap: 6, marginBottom: 8, alignItems: 'center' }}>
             <TextInput value={it.description} onChangeText={(v) => setItem(i, 'description', v)} placeholder="Item" placeholderTextColor={colors.faint} style={[s.input, { flex: 1, paddingVertical: 10 }]} />
@@ -229,6 +251,7 @@ export default function ReceiptEditScreen({ nav, params }) {
             <Text style={{ color: colors.danger, fontSize: 18, paddingHorizontal: 4 }} onPress={() => set('lineItems')(f.lineItems.filter((_, idx) => idx !== i))}>✕</Text>
           </View>
         ))}
+        </View>
         <Button title="Add line item" icon="plus" variant="ghost" small onPress={() => set('lineItems')([...f.lineItems, { description: '', qty: '1', amount: '' }])} />
 
         <SectionTitle>Notes</SectionTitle>

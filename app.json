@@ -39,6 +39,14 @@
           "photosPermission": "ScanTrack lets you upload receipt photos from your library.",
           "microphonePermission": false
         }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "ScanTrack uses the camera to scan your receipts.",
+          "recordAudioAndroid": false,
+          "barcodeScannerEnabled": false
+        }
       ]
     ]
   }

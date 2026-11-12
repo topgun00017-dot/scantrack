@@ -92,7 +92,9 @@ export async function extractReceipt(settings, base64, mimeType = 'image/jpeg') 
   "payment_method": string ("Cash", "Card", "E-wallet", etc., "" if unknown),
   "category": one of ${JSON.stringify(CATEGORY_KEYS)},
   "line_items": [{"description": string, "qty": number, "amount": number}],
-  "confidence": "high" | "low"
+  "confidence": "high" | "low",
+  "low_confidence_fields": array of the fields you could not read clearly or had to guess, from
+     ["merchant", "date", "total", "tax", "payment_method", "category", "line_items"] ([] if all clear)
 }
 Capture every line item. Amounts are plain numbers without currency symbols.
 Choose "category" from this Malaysian small-business chart of accounts:
@@ -150,7 +152,22 @@ ${categoryGuide()}`;
     category: normalizeCategory(d.category, d.merchant, items),
     lineItems: items,
     status: d.confidence === 'low' || !Number(d.total) ? 'needs_review' : 'processed',
+    lowConfidence: doubtfulFields(d, items),
   };
+}
+
+// Fields the review form highlights in yellow: what the AI flagged, plus simple checks.
+const FIELD_MAP = { merchant: 'merchant', date: 'date', total: 'total', tax: 'tax', payment_method: 'paymentMethod', category: 'category', line_items: 'lineItems' };
+function doubtfulFields(d, items) {
+  const out = new Set((Array.isArray(d.low_confidence_fields) ? d.low_confidence_fields : []).map((f) => FIELD_MAP[f]).filter(Boolean));
+  if (!d.merchant || /unknown/i.test(d.merchant)) out.add('merchant');
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(d.date || '')) out.add('date');
+  if (!Number(d.total)) out.add('total');
+  const itemsSum = items.reduce((a, i) => a + (Number(i.amount) || 0), 0);
+  const base = Number(d.subtotal) || Number(d.total) - (Number(d.tax) || 0);
+  if (items.length && base > 0 && Math.abs(itemsSum - base) > Math.max(0.05, base * 0.02)) out.add('lineItems');
+  if (d.confidence === 'low' && !out.size) out.add('total');
+  return [...out];
 }
 
 // ---------- 2. Assistant (find, tag, categorise, reconcile) ----------

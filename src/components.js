@@ -79,11 +79,19 @@ export function ChipRow({ children }) {
   );
 }
 
-export function Field({ label, style, ...props }) {
+// Soft yellow for fields the AI wasn't sure about.
+export const DOUBT = { bg: '#FEF9C3', border: '#FACC15', text: '#854D0E' };
+
+export function Field({ label, style, highlight, ...props }) {
   return (
     <View style={[{ marginBottom: 12 }, style]}>
-      {!!label && <Text style={s.label}>{label}</Text>}
-      <TextInput placeholderTextColor={colors.faint} style={s.input} {...props} />
+      {!!label && (
+        <Text style={[s.label, highlight && { color: DOUBT.text }]}>
+          {label}
+          {highlight ? '  · please check' : ''}
+        </Text>
+      )}
+      <TextInput placeholderTextColor={colors.faint} style={[s.input, highlight && { backgroundColor: DOUBT.bg, borderColor: DOUBT.border }]} {...props} />
     </View>
   );
 }

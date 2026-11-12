@@ -1,6 +1,7 @@
 // Track expenses: spending auto-categorised, monthly trend, tax-time readiness.
 import { Icon } from '../icons';
 import CompanySwitcher from '../CompanySwitcher';
+import { openCamera } from '../capture';
 import React, { useMemo, useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { useStore } from '../store';
@@ -69,7 +70,7 @@ export default function HomeScreen({ nav }) {
 
         <SectionTitle right={<Text style={{ color: colors.accentInk, fontWeight: '700' }} onPress={() => nav.tab('receipts')}>See all</Text>}>Recent</SectionTitle>
         {list.slice(0, 5).map((r) => <ReceiptRow key={r.id} r={r} onPress={() => nav.push('receipt', { id: r.id })} />)}
-        {list.length === 0 && <Button title="Scan your first receipt" icon="camera" onPress={() => nav.tab('scan')} />}
+        {list.length === 0 && <Button title="Scan your first receipt" icon="camera" onPress={openCamera} />}
       </View>
 
     </ScrollView>

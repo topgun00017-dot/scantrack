@@ -8,11 +8,12 @@ import { colors } from './src/theme';
 import DialogHost from './src/DialogHost';
 import ToastHost from './src/Toast';
 import ReceiptResultHost from './src/ReceiptResult';
+import CameraModal from './src/CameraModal';
+import { openCamera } from './src/capture';
 import { CompaniesProvider, useCompanies } from './src/companies';
 
 import HomeScreen from './src/screens/HomeScreen';
 import ReceiptsScreen from './src/screens/ReceiptsScreen';
-import ScanScreen from './src/screens/ScanScreen';
 import ReceiptEditScreen from './src/screens/ReceiptEditScreen';
 import AgentScreen from './src/screens/AgentScreen';
 import MoreScreen from './src/screens/MoreScreen';
@@ -26,7 +27,7 @@ import InsightsScreen from './src/screens/InsightsScreen';
 const TABS = [
   { key: 'home', label: 'Expenses', icon: 'wallet', comp: HomeScreen },
   { key: 'insights', label: 'Insights', icon: 'chart-pie', comp: InsightsScreen },
-  { key: 'scan', label: 'Scan', icon: 'camera', comp: ScanScreen, center: true },
+  { key: 'scan', label: 'Scan', icon: 'camera', center: true }, // opens the receipt camera, not a page
   { key: 'receipts', label: 'Receipts', icon: 'receipt', comp: ReceiptsScreen },
   { key: 'more', label: 'More', icon: 'menu', comp: MoreScreen },
 ];
@@ -81,7 +82,7 @@ function Shell({ tab, setTab }) {
             const active = t.key === tab;
             if (t.center) {
               return (
-                <Pressable key={t.key} onPress={() => (tab === 'scan' && !StackComp ? nav.tab('scan', { snap: true }) : nav.tab(t.key))} style={styles.tab}>
+                <Pressable key={t.key} onPress={openCamera} style={styles.tab}>
                   <View style={[styles.fab, active && { borderColor: colors.text }]}>
                     <Icon name={t.icon} size={26} color={colors.accentText} />
                   </View>
@@ -98,6 +99,7 @@ function Shell({ tab, setTab }) {
         </SafeAreaView>
       )}
       <ReceiptResultHost />
+      <CameraModal nav={nav} />
     </SafeAreaView>
   );
 }
