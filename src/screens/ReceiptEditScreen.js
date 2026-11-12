@@ -65,11 +65,15 @@ export default function ReceiptEditScreen({ nav, params }) {
   const initialForm = useRef(JSON.stringify(f));
   const live = useRef({});
   live.current = { f, prevId, nextId };
-  const pan = useRef(new Animated.Value(params.from === 'next' ? screenW * 0.35 : params.from === 'prev' ? -screenW * 0.35 : 0)).current;
+  const pan = useRef(new Animated.Value(params.from === 'next' ? screenW : params.from === 'prev' ? -screenW : 0)).current;
   useEffect(() => {
     Animated.spring(pan, { toValue: 0, useNativeDriver: true, friction: 9 }).start();
   }, []);
-  const goTo = (id, dir) => nav.replace('receipt', { id, ids: order, from: dir });
+  // Only the photo slides; the fields stay put and keep the same scroll position.
+  const scrollRef = useRef(null);
+  const scrollY = useRef(0);
+  const restored = useRef(false);
+  const goTo = (id, dir) => nav.replace('receipt', { id, ids: order, from: dir, scrollY: scrollY.current });
   const tryGo = (dir) => {
     const id = dir === 'next' ? live.current.nextId : live.current.prevId;
     if (!id) return Animated.spring(pan, { toValue: 0, useNativeDriver: true }).start();
@@ -227,9 +231,10 @@ export default function ReceiptEditScreen({ nav, params }) {
           </Pressable>
         </View>
       )}
-      <Animated.View style={{ flex: 1, transform: [{ translateX: pan }] }} {...swipe.panHandlers}>
+      <View style={{ flex: 1 }} {...swipe.panHandlers}>
       {/* split view: the receipt photo stays on top, the fields scroll below it */}
       {src.imageUri && !keyboard ? (
+        <Animated.View style={{ transform: [{ translateX: pan }] }}>
         <Pressable onPress={() => setZoom(true)} style={{ height: Math.round(screenH * 0.3), marginHorizontal: 16, borderRadius: 14, overflow: 'hidden', backgroundColor: '#111827' }}>
           <Image source={{ uri: src.imageUri }} style={{ width: '100%', height: '100%' }} resizeMode="contain" />
           <View style={{ position: 'absolute', right: 10, bottom: 10, flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: 999, paddingVertical: 5, paddingHorizontal: 10 }}>
@@ -237,8 +242,21 @@ export default function ReceiptEditScreen({ nav, params }) {
             <Text style={{ color: '#fff', fontSize: 12, fontWeight: '700' }}>Tap to zoom</Text>
           </View>
         </Pressable>
+        </Animated.View>
       ) : null}
-      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 48 + bottomInset + keyboard }} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        ref={scrollRef}
+        onScroll={(e) => (scrollY.current = e.nativeEvent.contentOffset.y)}
+        scrollEventThrottle={32}
+        onContentSizeChange={() => {
+          if (params.scrollY && !restored.current) {
+            restored.current = true;
+            scrollRef.current?.scrollTo({ y: params.scrollY, animated: false });
+          }
+        }}
+        contentContainerStyle={{ padding: 16, paddingBottom: 48 + bottomInset + keyboard }}
+        keyboardShouldPersistTaps="handled"
+      >
         {doubt.size > 0 && (
           <View style={{ flexDirection: 'row', gap: 10, backgroundColor: DOUBT.bg, borderWidth: 1, borderColor: DOUBT.border, borderRadius: 12, padding: 12, marginBottom: 4 }}>
             <Icon name="alert" size={18} color={DOUBT.text} />
@@ -342,7 +360,7 @@ export default function ReceiptEditScreen({ nav, params }) {
         <Button title={isNew ? 'Save receipt' : f.status === 'needs_review' ? 'Save & mark reviewed' : 'Save changes'} onPress={save} style={{ marginTop: 20 }} />
       </ScrollView>
 
-      </Animated.View>
+      </View>
 
       <CategoryEditor visible={catEditor} onClose={() => setCatEditor(false)} onCreated={(key) => set('category')(key)} />
 
