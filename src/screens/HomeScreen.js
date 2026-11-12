@@ -19,12 +19,11 @@ export default function HomeScreen({ nav }) {
   const { list, cats, months, issues } = useMemo(() => {
     const r = periodRange(period);
     const list = filterReceipts(receipts, r).filter((x) => inPeriod(period, x.date));
-    return { list, cats: byCategory(list), months: byMonth(receipts, 6), issues: findIssues(receipts).filter((i) => i.type !== 'no_image') };
+    return { list, cats: byCategory(list), months: byMonth(receipts, 12), issues: findIssues(receipts).filter((i) => i.type !== 'no_image') };
   }, [receipts, period]);
 
   const total = sum(list);
   const maxMonth = Math.max(1, ...months.map((m) => m.total));
-  const maxCat = Math.max(1, ...cats.map((c) => c.total));
 
   return (
     <ScrollView contentContainerStyle={{ paddingBottom: 32 }}>
@@ -49,48 +48,24 @@ export default function HomeScreen({ nav }) {
           </Card>
         )}
 
-        <SectionTitle>Last 6 months</SectionTitle>
+        <SectionTitle>Last 12 months</SectionTitle>
         <Card>
-          <View style={{ flexDirection: 'row', alignItems: 'flex-end', height: 120, gap: 10 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'flex-end', height: 120, gap: 4 }}>
             {months.map((m, i) => (
               <View key={m.key} style={{ flex: 1, alignItems: 'center' }}>
                 <View
                   style={{
-                    width: '70%',
+                    width: '78%',
                     height: Math.max(4, (m.total / maxMonth) * 96),
                     backgroundColor: i === months.length - 1 ? colors.accent : colors.bar,
                     borderRadius: 6,
                   }}
                 />
-                <Text style={[s.sub, { fontSize: 11, marginTop: 6 }]}>{m.label}</Text>
+                <Text style={[s.sub, { fontSize: 10, marginTop: 6 }]}>{m.label}</Text>
               </View>
             ))}
           </View>
         </Card>
-
-        <SectionTitle right={<Text style={{ color: colors.accentInk, fontWeight: '700' }} onPress={() => nav.tab('insights', { period })}>Breakdown ›</Text>}>By category</SectionTitle>
-        <Card>
-          {cats.length === 0 && <Text style={s.sub}>No spending in this period yet.</Text>}
-          {cats.map((c) => {
-            const meta = categoryMeta(c.category);
-            return (
-              <View key={c.category} style={{ marginBottom: 12 }}>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}><Icon name={meta.icon} size={18} color={meta.color} /><Text style={s.body}>{c.category} <Text style={s.sub}>· {c.count}</Text></Text></View>
-                  <Text style={[s.body, { fontWeight: '700' }]}>{money(c.total, cur)}</Text>
-                </View>
-                <View style={{ height: 6, backgroundColor: colors.surface2, borderRadius: 3, marginTop: 6 }}>
-                  <View style={{ height: 6, width: `${(c.total / maxCat) * 100}%`, backgroundColor: meta.color, borderRadius: 3 }} />
-                </View>
-              </View>
-            );
-          })}
-        </Card>
-
-        <View style={{ flexDirection: 'row', gap: 10, marginTop: 16 }}>
-          <Button title="New report" icon="file-plus" variant="secondary" style={{ flex: 1 }} onPress={() => nav.push('reports', { create: true })} />
-          <Button title="Export" icon="download" variant="secondary" style={{ flex: 1 }} onPress={() => nav.push('export')} />
-        </View>
 
         <SectionTitle right={<Text style={{ color: colors.accentInk, fontWeight: '700' }} onPress={() => nav.tab('receipts')}>See all</Text>}>Recent</SectionTitle>
         {list.slice(0, 5).map((r) => <ReceiptRow key={r.id} r={r} onPress={() => nav.push('receipt', { id: r.id })} />)}
