@@ -3,7 +3,7 @@ import { showAlert } from '../platform';
 import { Icon } from '../icons';
 import CompanySwitcher from '../CompanySwitcher';
 import React, { useMemo, useState } from 'react';
-import { Alert, FlatList, Modal, Pressable, Text, TextInput, View } from 'react-native';
+import { Alert, FlatList, Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { useStore } from '../store';
 import { Button, Chip, ChipRow, Empty, Header, ReceiptRow, s } from '../components';
 import { colors } from '../theme';
@@ -16,6 +16,7 @@ export default function ReceiptsScreen({ nav }) {
   const [category, setCategory] = useState(null);
   const [tag, setTag] = useState(null);
   const [onlyReview, setOnlyReview] = useState(false);
+  const [catOpen, setCatOpen] = useState(false);
   const [selected, setSelected] = useState([]);
   const [modal, setModal] = useState(null); // 'tag' | 'category'
   const [tagInput, setTagInput] = useState('');
@@ -61,12 +62,46 @@ export default function ReceiptsScreen({ nav }) {
         />
           <View pointerEvents="none" style={{ position: 'absolute', left: 14 }}><Icon name="search" size={18} color={colors.faint} /></View>
         </View>
-        <ChipRow>
-          <Chip label="Needs review" active={onlyReview} onPress={() => setOnlyReview(!onlyReview)} color={colors.accent} />
-          {CATEGORIES.map((c) => (
-            <Chip key={c.key} icon={c.icon} iconColor={c.color} label={c.key} active={category === c.key} onPress={() => setCategory(category === c.key ? null : c.key)} />
-          ))}
-        </ChipRow>
+        {/* category drop-down: All / Needs review / each category */}
+        {(() => {
+          const m = CATEGORIES.find((c) => c.key === category);
+          return (
+            <Pressable
+              onPress={() => setCatOpen(true)}
+              style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.surface, borderRadius: 12, borderWidth: 1, borderColor: category || onlyReview ? colors.accent : colors.border, paddingVertical: 12, paddingHorizontal: 14, marginTop: 10, opacity: pressed ? 0.7 : 1 })}
+            >
+              <Icon name={m ? m.icon : onlyReview ? 'alert' : 'shapes'} size={18} color={m ? m.color : onlyReview ? colors.warning : colors.accentInk} />
+              <Text style={[s.sub, { fontSize: 13 }]}>Category</Text>
+              <Text style={[s.body, { flex: 1, fontWeight: '700' }]} numberOfLines={1}>{m ? m.key : onlyReview ? 'Needs review' : 'All'}</Text>
+              <Icon name="chevron-down" size={18} color={colors.muted} />
+            </Pressable>
+          );
+        })()}
+        <Modal visible={catOpen} transparent animationType="fade" onRequestClose={() => setCatOpen(false)}>
+          <Pressable style={{ flex: 1, backgroundColor: '#0008', justifyContent: 'center', padding: 24 }} onPress={() => setCatOpen(false)}>
+            <Pressable style={{ backgroundColor: colors.surface, borderRadius: 18, paddingVertical: 8, maxHeight: '80%' }} onPress={() => {}}>
+              <Text style={[s.h2, { paddingHorizontal: 16, paddingVertical: 10 }]}>Show receipts</Text>
+              <ScrollView>
+                {[
+                  { key: 'all', label: 'All', icon: 'shapes', color: colors.accentInk, on: !category && !onlyReview, count: receipts.length, pick: () => { setCategory(null); setOnlyReview(false); } },
+                  { key: 'review', label: 'Needs review', icon: 'alert', color: colors.warning, on: onlyReview, count: receipts.filter((r) => r.status === 'needs_review').length, pick: () => { setCategory(null); setOnlyReview(true); } },
+                  ...CATEGORIES.map((c) => ({ key: c.key, label: c.key, icon: c.icon, color: c.color, on: category === c.key, count: receipts.filter((r) => r.category === c.key).length, pick: () => { setCategory(c.key); setOnlyReview(false); } })),
+                ].map((o) => (
+                  <Pressable
+                    key={o.key}
+                    onPress={() => { o.pick(); setCatOpen(false); }}
+                    style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, paddingHorizontal: 16, backgroundColor: o.on ? colors.surface2 : pressed ? colors.bg : 'transparent' })}
+                  >
+                    <Icon name={o.icon} size={20} color={o.color} />
+                    <Text style={[s.body, { flex: 1, fontWeight: o.on ? '700' : '400' }]}>{o.label}</Text>
+                    <Text style={s.sub}>{o.count}</Text>
+                    {o.on ? <Icon name="check" size={18} color={colors.accentInk} /> : <View style={{ width: 18 }} />}
+                  </Pressable>
+                ))}
+              </ScrollView>
+            </Pressable>
+          </Pressable>
+        </Modal>
         {tags.length > 0 && (
           <ChipRow>
             {tags.map((t) => <Chip key={t} label={`#${t}`} active={tag === t} onPress={() => setTag(tag === t ? null : t)} color={colors.info} />)}
