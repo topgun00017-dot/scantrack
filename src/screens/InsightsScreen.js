@@ -14,7 +14,6 @@ import { byCategory, filterReceipts, money, sum } from '../utils';
 
 const CHARTS = [
   { key: 'doughnut', label: 'Doughnut', icon: 'circle' },
-  { key: 'pie', label: 'Pie', icon: 'chart-pie' },
   { key: 'bar', label: 'Bar graph', icon: 'chart-column' },
 ];
 
@@ -126,7 +125,7 @@ export default function InsightsScreen({ nav, params }) {
   const { receipts, settings, setSettings } = useStore();
   const [period, setPeriod] = useState(params?.period || currentPeriod());
   const [slice, setSlice] = useState(null);
-  const chart = settings.insightsChart || 'doughnut';
+  const chart = settings.insightsChart === 'bar' ? 'bar' : 'doughnut'; // Pie was removed; anything else shows the doughnut
   const cur = settings.currency;
 
   // Opened from Expenses' "Breakdown ›": show the months picked there.
