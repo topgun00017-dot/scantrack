@@ -151,13 +151,13 @@ export default function CameraModal({ nav }) {
 
   if (!open) return null;
   const granted = isWeb || perm?.granted;
-  const dim = 'rgba(0,0,0,0.55)';
+  const dim = 'rgba(244,246,250,0.9)'; // the app's light background, slightly see-through
   const corner = { position: 'absolute', width: 28, height: 28, borderColor: colors.accent };
 
   return (
     <Modal visible animationType="slide" onRequestClose={close} statusBarTranslucent>
-      <StatusBar barStyle="light-content" />
-      <View style={{ flex: 1, backgroundColor: '#000' }} onLayout={(e) => setView({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}>
+      <StatusBar barStyle="dark-content" />
+      <View style={{ flex: 1, backgroundColor: colors.bg }} onLayout={(e) => setView({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}>
         {granted && !isWeb && (
           <CameraView ref={cam} style={{ position: 'absolute', left: 0, top: 0, right: 0, bottom: 0 }} facing="back" enableTorch={torch} onCameraReady={() => setReady(true)} />
         )}
@@ -169,13 +169,13 @@ export default function CameraModal({ nav }) {
             <View style={{ position: 'absolute', left: 0, right: 0, top: frame.y + frame.h, bottom: 0, backgroundColor: dim }} />
             <View style={{ position: 'absolute', left: 0, width: frame.x, top: frame.y, height: frame.h, backgroundColor: dim }} />
             <View style={{ position: 'absolute', right: 0, width: frame.x, top: frame.y, height: frame.h, backgroundColor: dim }} />
-            <View style={{ position: 'absolute', left: frame.x, top: frame.y, width: frame.w, height: frame.h, borderRadius: 14, borderWidth: 1, borderColor: 'rgba(255,255,255,0.35)' }}>
+            <View style={{ position: 'absolute', left: frame.x, top: frame.y, width: frame.w, height: frame.h, borderRadius: 14, borderWidth: 1, borderColor: colors.border, backgroundColor: granted && !isWeb ? 'transparent' : '#E5E9F0' }}>
               <View style={[corner, { left: -2, top: -2, borderLeftWidth: 4, borderTopWidth: 4, borderTopLeftRadius: 14 }]} />
               <View style={[corner, { right: -2, top: -2, borderRightWidth: 4, borderTopWidth: 4, borderTopRightRadius: 14 }]} />
               <View style={[corner, { left: -2, bottom: -2, borderLeftWidth: 4, borderBottomWidth: 4, borderBottomLeftRadius: 14 }]} />
               <View style={[corner, { right: -2, bottom: -2, borderRightWidth: 4, borderBottomWidth: 4, borderBottomRightRadius: 14 }]} />
             </View>
-            <Text style={{ position: 'absolute', top: frame.y + frame.h + 12, left: 0, right: 0, textAlign: 'center', color: '#fff', fontSize: 14, fontWeight: '600' }}>
+            <Text style={{ position: 'absolute', top: frame.y + frame.h + 12, left: 0, right: 0, textAlign: 'center', color: colors.text, fontSize: 14, fontWeight: '700' }}>
               {!granted
                 ? 'Camera access is needed to scan receipts'
                 : auto && steady > 0
@@ -183,7 +183,7 @@ export default function CameraModal({ nav }) {
                 : 'Fit the receipt inside the frame'}
             </Text>
             {!aiReady && (
-              <Text style={{ position: 'absolute', top: frame.y + frame.h + 34, left: 24, right: 24, textAlign: 'center', color: '#FDE68A', fontSize: 12 }}>
+              <Text style={{ position: 'absolute', top: frame.y + frame.h + 34, left: 24, right: 24, textAlign: 'center', color: colors.accentInk, fontSize: 12 }}>
                 AI reading is off. You'll type the details after the photo.
               </Text>
             )}
@@ -192,32 +192,32 @@ export default function CameraModal({ nav }) {
 
         {/* top bar */}
         <View style={{ position: 'absolute', top: insets.top + 10, left: 12, right: 12, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-          <Pressable onPress={close} hitSlop={10} style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(0,0,0,0.45)', alignItems: 'center', justifyContent: 'center' }}>
-            <Icon name="x" size={22} color="#fff" />
+          <Pressable onPress={close} hitSlop={10} style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' }}>
+            <Icon name="x" size={22} color={colors.text} />
           </Pressable>
           <View style={{ flex: 1, alignItems: 'center' }}>
             <CompanySwitcher label="Save to" />
           </View>
-          <Pressable onPress={() => setTorch((t) => !t)} hitSlop={10} style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: torch ? colors.accent : 'rgba(0,0,0,0.45)', alignItems: 'center', justifyContent: 'center' }}>
-            <Icon name="zap" size={20} color={torch ? colors.accentText : '#fff'} />
+          <Pressable onPress={() => setTorch((t) => !t)} hitSlop={10} style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: torch ? colors.accent : colors.surface, borderWidth: 1, borderColor: torch ? colors.accent : colors.border, alignItems: 'center', justifyContent: 'center' }}>
+            <Icon name="zap" size={20} color={torch ? colors.accentText : colors.text} />
           </Pressable>
         </View>
         <Pressable
           onPress={() => setAuto((a) => !a)}
-          style={{ position: 'absolute', top: insets.top + 60, right: 12, flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 6, paddingHorizontal: 10, borderRadius: 999, backgroundColor: auto ? colors.accent : 'rgba(0,0,0,0.45)' }}
+          style={{ position: 'absolute', top: insets.top + 60, right: 12, flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 6, paddingHorizontal: 10, borderRadius: 999, backgroundColor: auto ? colors.accent : colors.surface, borderWidth: 1, borderColor: auto ? colors.accent : colors.border }}
         >
-          <Icon name="scan" size={14} color={auto ? colors.accentText : '#fff'} />
-          <Text style={{ color: auto ? colors.accentText : '#fff', fontWeight: '800', fontSize: 12 }}>AUTO {auto ? 'ON' : 'OFF'}</Text>
+          <Icon name="scan" size={14} color={auto ? colors.accentText : colors.text} />
+          <Text style={{ color: auto ? colors.accentText : colors.text, fontWeight: '800', fontSize: 12 }}>AUTO {auto ? 'ON' : 'OFF'}</Text>
         </Pressable>
 
         {/* bottom: shutter and Upload / Scan / Manual */}
-        <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, paddingBottom: insets.bottom + 14, paddingTop: 14, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center' }}>
+        <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, paddingBottom: insets.bottom + 14, paddingTop: 14, backgroundColor: colors.surface, borderTopWidth: 1, borderColor: colors.border, alignItems: 'center' }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', paddingHorizontal: 36 }}>
             <Pressable onPress={goGallery} style={{ alignItems: 'center', width: 64 }}>
-              <Icon name="images" size={26} color="#fff" />
-              <Text style={{ color: '#fff', fontSize: 12, marginTop: 4 }}>Upload</Text>
+              <Icon name="images" size={26} color={colors.text} />
+              <Text style={{ color: colors.text, fontSize: 12, marginTop: 4 }}>Upload</Text>
             </Pressable>
-            <Pressable onPress={granted ? shoot : requestPerm} disabled={shooting} style={{ width: 78, height: 78, borderRadius: 39, borderWidth: 4, borderColor: '#fff', alignItems: 'center', justifyContent: 'center' }}>
+            <Pressable onPress={granted ? shoot : requestPerm} disabled={shooting} style={{ width: 78, height: 78, borderRadius: 39, borderWidth: 4, borderColor: colors.accent + '66', alignItems: 'center', justifyContent: 'center' }}>
               <View style={{ width: 62, height: 62, borderRadius: 31, backgroundColor: shooting ? colors.faint : colors.accent, alignItems: 'center', justifyContent: 'center' }}>
                 {shooting ? <ActivityIndicator color="#fff" /> : <Icon name="camera" size={26} color={colors.accentText} />}
               </View>
@@ -226,24 +226,24 @@ export default function CameraModal({ nav }) {
               )}
             </Pressable>
             <Pressable onPress={goManual} style={{ alignItems: 'center', width: 64 }}>
-              <Icon name="file-text" size={26} color="#fff" />
-              <Text style={{ color: '#fff', fontSize: 12, marginTop: 4 }}>Manual</Text>
+              <Icon name="file-text" size={26} color={colors.text} />
+              <Text style={{ color: colors.text, fontSize: 12, marginTop: 4 }}>Manual</Text>
             </Pressable>
           </View>
           <View style={{ flexDirection: 'row', gap: 22, marginTop: 14 }}>
-            <Text onPress={goGallery} style={{ color: 'rgba(255,255,255,0.6)', fontWeight: '700', fontSize: 12, letterSpacing: 1 }}>UPLOAD</Text>
-            <Text style={{ color: colors.accent, fontWeight: '800', fontSize: 12, letterSpacing: 1 }}>SCAN</Text>
-            <Text onPress={goManual} style={{ color: 'rgba(255,255,255,0.6)', fontWeight: '700', fontSize: 12, letterSpacing: 1 }}>MANUAL · NO RECEIPT</Text>
+            <Text onPress={goGallery} style={{ color: colors.muted, fontWeight: '700', fontSize: 12, letterSpacing: 1 }}>UPLOAD</Text>
+            <Text style={{ color: colors.accentInk, fontWeight: '800', fontSize: 12, letterSpacing: 1 }}>SCAN</Text>
+            <Text onPress={goManual} style={{ color: colors.muted, fontWeight: '700', fontSize: 12, letterSpacing: 1 }}>MANUAL · NO RECEIPT</Text>
           </View>
         </View>
 
         {/* reading the receipt */}
         {busy && (
-          <View style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.85)', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-            <Image source={{ uri: busy.uri }} style={{ width: 200, height: 280, borderRadius: 14, opacity: 0.9 }} resizeMode="cover" />
+          <View style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+            <Image source={{ uri: busy.uri }} style={{ width: 200, height: 280, borderRadius: 14, borderWidth: 1, borderColor: colors.border }} resizeMode="cover" />
             <ActivityIndicator color={colors.accent} size="large" style={{ marginTop: 20 }} />
-            <Text style={{ color: '#fff', fontSize: 18, fontWeight: '800', marginTop: 10 }}>{busy.label}</Text>
-            <Text style={{ color: '#D1D5DB', marginTop: 4 }}>Merchant, date, items, tax and total</Text>
+            <Text style={{ color: colors.text, fontSize: 18, fontWeight: '800', marginTop: 10 }}>{busy.label}</Text>
+            <Text style={{ color: colors.muted, marginTop: 4 }}>Merchant, date, items, tax and total</Text>
           </View>
         )}
       </View>
