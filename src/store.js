@@ -1,12 +1,13 @@
 // All app data lives here and is saved on the phone (AsyncStorage).
 import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { AppState } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { addDays, nextOccurrence, todayKey } from './dates';
+import { addDays, todayKey } from './dates';
+import { KEY, toggleIn, uid } from './core';
+import { updateWidgets } from './widget';
 import { syncReminders } from './notify';
 
-const KEY = 'tidy:v1';
 export const INBOX = 'inbox';
-const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 
 function starter() {
   const t = todayKey();
@@ -38,6 +39,7 @@ const Ctx = createContext(null);
 export function StoreProvider({ children }) {
   const [data, setData] = useState(null);
   const syncTimer = useRef(null);
+  const lastSaved = useRef(null);
 
   useEffect(() => {
     (async () => {
@@ -51,10 +53,28 @@ export function StoreProvider({ children }) {
 
   useEffect(() => {
     if (!data) return;
-    AsyncStorage.setItem(KEY, JSON.stringify(data)).catch(() => {});
+    const json = JSON.stringify(data);
+    const save = json === lastSaved.current ? Promise.resolve() : AsyncStorage.setItem(KEY, json); // skip if just loaded
+    lastSaved.current = json;
+    save.then(() => updateWidgets(data)).catch(() => {});
     clearTimeout(syncTimer.current);
     syncTimer.current = setTimeout(() => syncReminders(data.tasks, data.lists), 800);
   }, [data]);
+
+  // Tasks ticked on the home-screen widget are saved straight to storage: pick them up on return.
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', async (st) => {
+      if (st !== 'active') return;
+      try {
+        const json = await AsyncStorage.getItem(KEY);
+        if (json && json !== lastSaved.current) {
+          lastSaved.current = json;
+          setData(JSON.parse(json));
+        }
+      } catch {}
+    });
+    return () => sub.remove();
+  }, []);
 
   const api = useMemo(() => {
     const up = (fn) => setData((d) => ({ ...d, ...fn(d) }));
@@ -67,16 +87,7 @@ export function StoreProvider({ children }) {
       updateTask: (id, patch) => up((d) => ({ tasks: d.tasks.map((t) => (t.id === id ? { ...t, ...patch } : t)) })),
       deleteTask: (id) => up((d) => ({ tasks: d.tasks.filter((t) => t.id !== id) })),
       // Ticking a repeating task keeps a done copy and moves the task on to its next date.
-      toggleTask: (id) =>
-        up((d) => {
-          const t = d.tasks.find((x) => x.id === id);
-          if (!t) return {};
-          if (!t.done && t.repeat && t.repeat !== 'none' && t.date) {
-            const doneCopy = { ...t, id: uid(), done: true, doneAt: Date.now(), repeat: 'none', time: null };
-            return { tasks: [...d.tasks.map((x) => (x.id === id ? { ...x, date: nextOccurrence(x.date, x.repeat) } : x)), doneCopy] };
-          }
-          return { tasks: d.tasks.map((x) => (x.id === id ? { ...x, done: !x.done, doneAt: x.done ? null : Date.now() } : x)) };
-        }),
+      toggleTask: (id) => up((d) => ({ tasks: toggleIn(d.tasks, id) })),
       moveTasks: (ids, date) => up((d) => ({ tasks: d.tasks.map((t) => (ids.includes(t.id) ? { ...t, date } : t)) })),
       clearCompleted: (listFilter) => up((d) => ({ tasks: d.tasks.filter((t) => !(t.done && listFilter(t))) })),
       addList: (list) => {
@@ -107,12 +118,4 @@ export function StoreProvider({ children }) {
 
 export const useStore = () => useContext(Ctx);
 
-// Sort: undone first, then by date/time (no date last), then created.
-export function sortTasks(a, b) {
-  if (a.done !== b.done) return a.done ? 1 : -1;
-  const ad = a.date || '9999', bd = b.date || '9999';
-  if (ad !== bd) return ad < bd ? -1 : 1;
-  const at = a.time || '99', bt = b.time || '99';
-  if (at !== bt) return at < bt ? -1 : 1;
-  return a.createdAt - b.createdAt;
-}
+export { sortTasks } from './core';

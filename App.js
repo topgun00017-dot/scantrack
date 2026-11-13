@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Actions } from './src/actions';
-import { BackHandler, View } from 'react-native';
+import { BackHandler, Linking, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { StoreProvider } from './src/store';
@@ -32,6 +32,14 @@ function Shell() {
     quickAdd: (defaults) => setQuick(defaults || {}),
     editList: (list, onDeleted) => setListSheet({ list, onDeleted }),
   };
+
+  // The widget's + button opens tidy://add → quick add.
+  React.useEffect(() => {
+    const handle = (url) => url && url.startsWith('tidy://add') && setQuick({});
+    Linking.getInitialURL().then(handle).catch(() => {});
+    const sub = Linking.addEventListener('url', ({ url }) => handle(url));
+    return () => sub.remove();
+  }, []);
 
   // Android back button closes a screen before leaving the app.
   React.useEffect(() => {
