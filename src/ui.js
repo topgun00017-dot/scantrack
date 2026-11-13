@@ -1,6 +1,6 @@
 // Shared building blocks: header, checkbox, task row, bottom sheet, month calendar, dialogs.
 import React, { useEffect, useState } from 'react';
-import { Keyboard, Modal, Platform, Pressable, ScrollView, Text, View } from 'react-native';
+import { Dimensions, Keyboard, Modal, Platform, Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from './icons';
 import { colors, shadow } from './theme';
@@ -12,7 +12,13 @@ export function useKeyboardHeight() {
   useEffect(() => {
     const show = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
     const hide = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
-    const a = Keyboard.addListener(show, (e) => setH(e?.endCoordinates?.height || 0));
+    // Measure from the keyboard's top edge to the bottom of the screen: on Android (edge to edge)
+    // the reported height leaves out the navigation bar under the keyboard.
+    const a = Keyboard.addListener(show, (e) => {
+      const c = e?.endCoordinates || {};
+      const fromTop = c.screenY ? Dimensions.get('screen').height - c.screenY : 0;
+      setH(Math.max(c.height || 0, fromTop));
+    });
     const b = Keyboard.addListener(hide, () => setH(0));
     return () => {
       a.remove();
@@ -106,7 +112,7 @@ export function Sheet({ visible, onClose, title, children, footer, tall }) {
   const insets = useSafeAreaInsets();
   const kb = useKeyboardHeight();
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose} statusBarTranslucent>
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose} statusBarTranslucent navigationBarTranslucent>
       <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.25)', justifyContent: 'flex-end' }}>
         <Pressable style={{ flex: 1 }} onPress={onClose} />
         <View style={{ backgroundColor: colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '92%', minHeight: tall ? '75%' : undefined, paddingBottom: (kb || insets.bottom) + 12 }}>
@@ -200,7 +206,7 @@ export function DialogHost() {
   }, []);
   if (!d) return null;
   return (
-    <Modal visible transparent animationType="fade" onRequestClose={() => setD(null)} statusBarTranslucent>
+    <Modal visible transparent animationType="fade" onRequestClose={() => setD(null)} statusBarTranslucent navigationBarTranslucent>
       <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.3)', alignItems: 'center', justifyContent: 'center', padding: 28 }}>
         <View style={{ backgroundColor: colors.surface, borderRadius: 20, padding: 22, width: '100%', maxWidth: 360 }}>
           <Text style={{ fontSize: 17, fontWeight: '700', color: colors.text }}>{d.title}</Text>

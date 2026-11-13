@@ -35,7 +35,7 @@ export default function QuickAdd({ visible, defaults, onClose, onDetails }) {
   };
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent>
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent navigationBarTranslucent>
       <Pressable style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.15)' }} onPress={onClose} />
       <View style={[{ position: 'absolute', left: 12, right: 12, bottom: (kb || insets.bottom) + 12, backgroundColor: colors.surface, borderRadius: 22, padding: 12 }, shadow, { shadowOpacity: 0.15, elevation: 8 }]}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
