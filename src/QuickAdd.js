@@ -1,11 +1,11 @@
 // Quick add bar: type a title and press Enter, or tap a coloured button to add more details.
 import React, { useEffect, useRef, useState } from 'react';
-import { Modal, Pressable, TextInput, View } from 'react-native';
+import { Pressable, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from './icons';
 import { colors, shadow } from './theme';
 import { useStore } from './store';
-import { toast, useKeyboardHeight } from './ui';
+import { Overlay, toast, useKeyboardHeight } from './ui';
 
 const BUTTONS = [
   { key: 'date', icon: 'calendar', color: '#4F7BE8' },
@@ -35,8 +35,7 @@ export default function QuickAdd({ visible, defaults, onClose, onDetails }) {
   };
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent navigationBarTranslucent>
-      <Pressable style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.15)' }} onPress={onClose} />
+    <Overlay visible={visible} onClose={onClose}>
       <View style={[{ position: 'absolute', left: 12, right: 12, bottom: (kb || insets.bottom) + 12, backgroundColor: colors.surface, borderRadius: 22, padding: 12 }, shadow, { shadowOpacity: 0.15, elevation: 8 }]}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
           <View style={{ width: 22, height: 22, borderRadius: 11, borderWidth: 1.6, borderColor: colors.faint, marginLeft: 6 }} />
@@ -66,6 +65,6 @@ export default function QuickAdd({ visible, defaults, onClose, onDetails }) {
           </Pressable>
         </View>
       </View>
-    </Modal>
+    </Overlay>
   );
 }

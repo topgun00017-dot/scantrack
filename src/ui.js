@@ -1,6 +1,6 @@
 // Shared building blocks: header, checkbox, task row, bottom sheet, month calendar, dialogs.
 import React, { useEffect, useState } from 'react';
-import { Dimensions, Keyboard, Modal, Platform, Pressable, ScrollView, Text, View } from 'react-native';
+import { Animated, BackHandler, Dimensions, Keyboard, Modal, Platform, Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from './icons';
 import { colors, shadow } from './theme';
@@ -107,15 +107,40 @@ export function AddPill({ onPress, bottom }) {
   );
 }
 
+// ---------- overlay drawn inside the app window (not a Modal): Android only reports the
+// keyboard for the main window, so panels with text boxes must live there to dodge it.
+export function Overlay({ visible, onClose, slide, children }) {
+  const anim = React.useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (!visible) return;
+    anim.setValue(0);
+    Animated.timing(anim, { toValue: 1, duration: 200, useNativeDriver: true }).start();
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      onClose();
+      return true;
+    });
+    return () => sub.remove();
+  }, [visible]);
+  if (!visible) return null;
+  return (
+    <View style={{ position: 'absolute', left: 0, top: 0, right: 0, bottom: 0, zIndex: 100, elevation: 100 }}>
+      <Animated.View style={{ position: 'absolute', left: 0, top: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.25)', opacity: anim }}>
+        <Pressable style={{ flex: 1 }} onPress={onClose} />
+      </Animated.View>
+      <Animated.View pointerEvents="box-none" style={{ flex: 1, justifyContent: 'flex-end', opacity: slide ? 1 : anim, transform: slide ? [{ translateY: anim.interpolate({ inputRange: [0, 1], outputRange: [400, 0] }) }] : [] }}>
+        {children}
+      </Animated.View>
+    </View>
+  );
+}
+
 // ---------- bottom sheet
 export function Sheet({ visible, onClose, title, children, footer, tall }) {
   const insets = useSafeAreaInsets();
   const kb = useKeyboardHeight();
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose} statusBarTranslucent navigationBarTranslucent>
-      <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.25)', justifyContent: 'flex-end' }}>
-        <Pressable style={{ flex: 1 }} onPress={onClose} />
-        <View style={{ backgroundColor: colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '92%', minHeight: tall ? '75%' : undefined, paddingBottom: (kb || insets.bottom) + 12 }}>
+    <Overlay visible={visible} onClose={onClose} slide>
+        <View style={{ backgroundColor: colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '94%', marginTop: insets.top + 8, minHeight: tall ? '75%' : undefined, paddingBottom: (kb || insets.bottom) + 12 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingTop: 18, paddingBottom: 8, paddingHorizontal: 56 }}>
             <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text }} numberOfLines={1}>{title}</Text>
             <Pressable onPress={onClose} hitSlop={12} style={{ position: 'absolute', right: 18, top: 16 }}>
@@ -127,8 +152,7 @@ export function Sheet({ visible, onClose, title, children, footer, tall }) {
           </ScrollView>
           {footer}
         </View>
-      </View>
-    </Modal>
+    </Overlay>
   );
 }
 
