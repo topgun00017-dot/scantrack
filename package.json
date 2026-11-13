@@ -1,0 +1,23 @@
+{
+  "name": "tidy",
+  "version": "1.0.0",
+  "main": "index.js",
+  "dependencies": {
+    "@react-native-async-storage/async-storage": "^2.2.0",
+    "@react-native-community/datetimepicker": "9.2.1",
+    "expo": "~58.0.23",
+    "expo-notifications": "~58.1.8",
+    "expo-status-bar": "~58.0.4",
+    "lucide-react-native": "1.61.0",
+    "react": "19.3.0",
+    "react-native": "0.88.1",
+    "react-native-safe-area-context": "~5.11.1",
+    "react-native-svg": "15.16.0"
+  },
+  "scripts": {
+    "start": "expo start",
+    "android": "expo start --android",
+    "web": "expo start --web"
+  },
+  "private": true
+}

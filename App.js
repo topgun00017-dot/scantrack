@@ -1,0 +1,83 @@
+import React, { useState } from 'react';
+import { Actions } from './src/actions';
+import { BackHandler, View } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+import { StoreProvider } from './src/store';
+import { colors } from './src/theme';
+import { DialogHost, ToastHost } from './src/ui';
+import TaskSheet from './src/TaskSheet';
+import ListSheet from './src/ListSheet';
+import QuickAdd from './src/QuickAdd';
+import HomeScreen from './src/screens/HomeScreen';
+import ListScreen from './src/screens/ListScreen';
+import CalendarScreen from './src/screens/CalendarScreen';
+import SearchScreen from './src/screens/SearchScreen';
+import SettingsScreen from './src/screens/SettingsScreen';
+
+const SCREENS = { home: HomeScreen, list: ListScreen, calendar: CalendarScreen, search: SearchScreen, settings: SettingsScreen };
+
+function Shell() {
+  const [stack, setStack] = useState([{ name: 'home', params: {} }]);
+  const [taskSheet, setTaskSheet] = useState(null); // { task, focus }
+  const [quick, setQuick] = useState(null); // defaults for a new task
+  const [listSheet, setListSheet] = useState(null); // { list, onDeleted }
+
+  const nav = {
+    push: (name, params = {}) => setStack((s) => [...s, { name, params }]),
+    back: () => setStack((s) => (s.length > 1 ? s.slice(0, -1) : s)),
+  };
+  const actions = {
+    openTask: (task, focus) => setTaskSheet({ task, focus }),
+    quickAdd: (defaults) => setQuick(defaults || {}),
+    editList: (list, onDeleted) => setListSheet({ list, onDeleted }),
+  };
+
+  // Android back button closes a screen before leaving the app.
+  React.useEffect(() => {
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (stack.length > 1) {
+        nav.back();
+        return true;
+      }
+      return false;
+    });
+    return () => sub.remove();
+  }, [stack.length]);
+
+  const top = stack[stack.length - 1];
+  const Screen = SCREENS[top.name];
+  return (
+    <Actions.Provider value={actions}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} edges={['top', 'left', 'right']}>
+        <View style={{ flex: 1 }}>
+          <Screen key={stack.length + top.name + JSON.stringify(top.params)} nav={nav} params={top.params} />
+        </View>
+      </SafeAreaView>
+      <QuickAdd
+        visible={!!quick}
+        defaults={quick || {}}
+        onClose={() => setQuick(null)}
+        onDetails={(draft, focus) => {
+          setQuick(null);
+          setTaskSheet({ task: draft, focus });
+        }}
+      />
+      <TaskSheet visible={!!taskSheet} task={taskSheet?.task} focus={taskSheet?.focus} onClose={() => setTaskSheet(null)} />
+      <ListSheet visible={!!listSheet} list={listSheet?.list} onDeleted={listSheet?.onDeleted} onClose={() => setListSheet(null)} />
+      <ToastHost />
+      <DialogHost />
+    </Actions.Provider>
+  );
+}
+
+export default function App() {
+  return (
+    <SafeAreaProvider>
+      <StatusBar style="dark" />
+      <StoreProvider>
+        <Shell />
+      </StoreProvider>
+    </SafeAreaProvider>
+  );
+}

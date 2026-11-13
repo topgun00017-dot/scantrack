@@ -1,0 +1,25 @@
+{
+  "expo": {
+    "name": "Tidy",
+    "slug": "tidy",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "backgroundColor": "#F4F4F6",
+    "android": {
+      "package": "com.tidy.todo",
+      "adaptiveIcon": {
+        "backgroundColor": "#7CB342",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "permissions": ["android.permission.POST_NOTIFICATIONS", "android.permission.SCHEDULE_EXACT_ALARM"],
+      "blockedPermissions": ["android.permission.RECORD_AUDIO", "android.permission.SYSTEM_ALERT_WINDOW"]
+    },
+    "web": { "favicon": "./assets/favicon.png" },
+    "plugins": [
+      ["expo-notifications", { "color": "#7CB342" }]
+    ]
+  }
+}
