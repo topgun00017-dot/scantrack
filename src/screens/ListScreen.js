@@ -114,7 +114,7 @@ export default function ListScreen({ nav, params }) {
         <Section title="Upcoming" count={upcoming.length}>{upcoming.map((x) => row(x))}</Section>
         <Section title={params.kind === 'list' && list.id !== INBOX && !today.length && !upcoming.length && !overdue.length ? 'Tasks' : 'No date'} count={noDate.length}>{noDate.map((x) => row(x))}</Section>
         {settings.showCompleted && (
-          <Section title="Completed" color={colors.sub} count={done.length} right={<Link label="Clear" onPress={() => clearCompleted(inView)} />}>
+          <Section title="Completed" color={colors.sub} count={done.length} right={<Link label="Completed folder" onPress={() => nav.push('completed')} />}>
             {done.slice(0, 50).map((x) => row(x))}
           </Section>
         )}
@@ -135,7 +135,7 @@ export default function ListScreen({ nav, params }) {
         )}
         <MenuItem icon={settings.showCompleted ? 'eye-off' : 'eye'} label={settings.showCompleted ? 'Hide completed tasks' : 'Show completed tasks'} onPress={() => (setSettings({ showCompleted: !settings.showCompleted }), setMenu(false))} />
         {!!overdue.length && <MenuItem icon="calendar-clock" label="Move overdue to today" onPress={() => (moveTasks(overdue.map((x) => x.id), t), setMenu(false), toast('Moved to today'))} />}
-        {!!done.length && <MenuItem icon="trash" label={`Clear ${done.length} completed`} color={colors.danger} onPress={() => (clearCompleted(inView), setMenu(false))} />}
+        <MenuItem icon="folder-check" label="Open Completed folder" onPress={() => (setMenu(false), nav.push('completed'))} />
         <View style={{ height: 10 }} />
       </Sheet>
     </View>

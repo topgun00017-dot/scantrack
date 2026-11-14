@@ -69,6 +69,7 @@ export default function HomeScreen({ nav }) {
               onLongPress={() => editList(l)}
             />
           ))}
+          <Tile width={tileW} icon="folder-check" color={colors.accentDark} title="Completed" count={tasks.filter((x) => x.done).length} onPress={() => nav.push('completed')} />
           <Tile width={tileW} icon="plus" color={colors.sub} title="New list" dashed onPress={() => editList(null)} />
         </View>
         <Text style={{ textAlign: 'center', color: colors.faint, fontSize: 12, marginTop: 18 }}>Press and hold a list to rename, recolour or delete it</Text>

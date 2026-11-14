@@ -15,8 +15,9 @@ import ListScreen from './src/screens/ListScreen';
 import CalendarScreen from './src/screens/CalendarScreen';
 import SearchScreen from './src/screens/SearchScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
+import CompletedScreen from './src/screens/CompletedScreen';
 
-const SCREENS = { home: HomeScreen, list: ListScreen, calendar: CalendarScreen, search: SearchScreen, settings: SettingsScreen };
+const SCREENS = { home: HomeScreen, list: ListScreen, calendar: CalendarScreen, search: SearchScreen, settings: SettingsScreen, completed: CompletedScreen };
 
 function Shell() {
   const [stack, setStack] = useState([{ name: 'home', params: {} }]);
