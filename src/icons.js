@@ -1,5 +1,6 @@
 // Outline icons from Lucide (ISC licence), imported one by one so only these are bundled.
 import React from 'react';
+import I_GripVertical from 'lucide-react-native/icons/grip-vertical';
 import I_FolderCheck from 'lucide-react-native/icons/folder-check';
 import I_RotateCw from 'lucide-react-native/icons/undo-2';
 import I_Bookmark from 'lucide-react-native/icons/bookmark';
@@ -54,6 +55,7 @@ import I_CalendarDays from 'lucide-react-native/icons/calendar-days';
 import I_SunMedium from 'lucide-react-native/icons/sun-medium';
 
 const MAP = {
+  'grip-vertical': I_GripVertical,
   'folder-check': I_FolderCheck,
   'undo': I_RotateCw,
   'bookmark': I_Bookmark,

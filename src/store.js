@@ -88,6 +88,8 @@ export function StoreProvider({ children }) {
       deleteTask: (id) => up((d) => ({ tasks: d.tasks.filter((t) => t.id !== id) })),
       // Ticking a repeating task keeps a done copy and moves the task on to its next date.
       toggleTask: (id) => up((d) => ({ tasks: toggleIn(d.tasks, id) })),
+      // Save a hand-made order: ids in their new top-to-bottom order.
+      reorderTasks: (ids) => up((d) => ({ tasks: d.tasks.map((t) => (ids.includes(t.id) ? { ...t, order: ids.indexOf(t.id) } : t)) })),
       moveTasks: (ids, date) => up((d) => ({ tasks: d.tasks.map((t) => (ids.includes(t.id) ? { ...t, date } : t)) })),
       clearCompleted: (listFilter) => up((d) => ({ tasks: d.tasks.filter((t) => !(t.done && listFilter(t))) })),
       addList: (list) => {

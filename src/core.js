@@ -15,9 +15,13 @@ export function toggleIn(tasks, id) {
   return tasks.map((x) => (x.id === id ? { ...x, done: !x.done, doneAt: x.done ? null : Date.now() } : x));
 }
 
-// Sort: undone first, then by date/time (no date last), then created.
+// Sort: undone first; tasks you arranged by hand (order) in that order, ahead of the rest;
+// then by date/time (no date last), then created.
 export function sortTasks(a, b) {
   if (a.done !== b.done) return a.done ? 1 : -1;
+  const ao = a.order != null, bo = b.order != null;
+  if (ao && bo && a.order !== b.order) return a.order - b.order;
+  if (ao !== bo) return ao ? -1 : 1;
   const ad = a.date || '9999', bd = b.date || '9999';
   if (ad !== bd) return ad < bd ? -1 : 1;
   const at = a.time || '99', bt = b.time || '99';

@@ -1,12 +1,13 @@
 // One list (or Today / Flagged): Overdue, Today, Upcoming, No date and Completed sections.
-import React, { useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { BackHandler, Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '../icons';
 import { colors } from '../theme';
 import { INBOX, sortTasks, useStore } from '../store';
 import { useActions } from '../actions';
-import { AddPill, RoundButton, Sheet, TaskRow, TopBar, showDialog, toast } from '../ui';
+import DragList from '../DragList';
+import { PillButton, AddPill, RoundButton, Sheet, TaskRow, TopBar, showDialog, toast } from '../ui';
 import { todayKey } from '../dates';
 
 function Section({ title, color = colors.text, right, children, count }) {
@@ -30,7 +31,14 @@ const Link = ({ label, onPress }) => (
 
 export default function ListScreen({ nav, params }) {
   const insets = useSafeAreaInsets();
-  const { lists, tasks, settings, setSettings, toggleTask, moveTasks, clearCompleted } = useStore();
+  const { lists, tasks, settings, setSettings, toggleTask, moveTasks, clearCompleted, reorderTasks } = useStore();
+  const [reorder, setReorder] = useState(false);
+  const [dragging, setDragging] = useState(false);
+  useEffect(() => {
+    if (!reorder) return;
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => (setReorder(false), true));
+    return () => sub.remove();
+  }, [reorder]);
   const { openTask, quickAdd, editList } = useActions();
   const [hideOverdue, setHideOverdue] = useState(false);
   const [menu, setMenu] = useState(false);
@@ -70,12 +78,29 @@ export default function ListScreen({ nav, params }) {
     if (x.repeat && x.repeat !== 'none' && x.date) toast('Done · next one is on its new date');
     else toast('Completed', { label: 'Undo', onPress: () => toggleTask(x.id) });
   };
-  const row = (x, extra = {}) => <TaskRow key={x.id} task={x} list={listOf(x)} showList={showList} onPress={() => openTask(x)} onToggle={() => tick(x)} {...extra} />;
+  const row = (x, extra = {}) => <TaskRow key={x.id} task={x} list={listOf(x)} showList={showList} onPress={() => openTask(x)} onLongPress={x.done ? undefined : () => setReorder(true)} onToggle={() => tick(x)} {...extra} />;
+  // Reorder mode: each section becomes a drag list.
+  const drag = (items) => <DragList items={items} lists={showList ? lists : []} onDrop={reorderTasks} onDragging={setDragging} />;
   const defaults = params.kind === 'today' ? { date: t } : params.kind === 'flagged' ? { flag: true } : { listId: list.id };
 
   return (
     <View style={{ flex: 1 }}>
-      <TopBar onBack={nav.back} right={<RoundButton icon="ellipsis-vertical" onPress={() => setMenu(true)} />} />
+      <TopBar
+        onBack={reorder ? () => setReorder(false) : nav.back}
+        right={reorder ? <PillButton title="Done" onPress={() => setReorder(false)} style={{ paddingVertical: 9, paddingHorizontal: 22 }} /> : <RoundButton icon="ellipsis-vertical" onPress={() => setMenu(true)} />}
+      />
+      {reorder ? (
+        <ScrollView scrollEnabled={!dragging} contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}>
+          <View style={{ paddingHorizontal: 20, marginTop: 8 }}>
+            <Text style={{ fontSize: 26, fontWeight: '600', color: colors.text }}>{head.title}</Text>
+            <Text style={{ fontSize: 13, color: colors.sub, marginTop: 4 }}>Hold ≡ and drag a task up or down. Tap Done when finished.</Text>
+          </View>
+          <Section title="Overdue" color={colors.overdue} count={overdue.length}>{drag(overdue)}</Section>
+          <Section title="Today" count={today.length}>{drag(today)}</Section>
+          <Section title="Upcoming" count={upcoming.length}>{drag(upcoming)}</Section>
+          <Section title={params.kind === 'list' && list.id !== INBOX && !today.length && !upcoming.length && !overdue.length ? 'Tasks' : 'No date'} count={noDate.length}>{drag(noDate)}</Section>
+        </ScrollView>
+      ) : (
       <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 110 }}>
         <View style={{ paddingHorizontal: 20, marginTop: 8 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
@@ -127,12 +152,14 @@ export default function ListScreen({ nav, params }) {
           </View>
         )}
       </ScrollView>
-      <AddPill bottom={insets.bottom + 20} onPress={() => quickAdd(defaults)} />
+      )}
+      {!reorder && <AddPill bottom={insets.bottom + 20} onPress={() => quickAdd(defaults)} />}
 
       <Sheet visible={menu} onClose={() => setMenu(false)} title={head.title}>
         {list && (
           <MenuItem icon="pencil" label={list.system ? 'Change icon and colour' : 'Edit list'} onPress={() => (setMenu(false), editList(list, nav.back))} />
         )}
+        {open.length > 1 && <MenuItem icon="grip-vertical" label="Reorder tasks" onPress={() => (setMenu(false), setReorder(true))} />}
         <MenuItem icon={settings.showCompleted ? 'eye-off' : 'eye'} label={settings.showCompleted ? 'Hide completed tasks' : 'Show completed tasks'} onPress={() => (setSettings({ showCompleted: !settings.showCompleted }), setMenu(false))} />
         {!!overdue.length && <MenuItem icon="calendar-clock" label="Move overdue to today" onPress={() => (moveTasks(overdue.map((x) => x.id), t), setMenu(false), toast('Moved to today'))} />}
         <MenuItem icon="folder-check" label="Open Completed folder" onPress={() => (setMenu(false), nav.push('completed'))} />

@@ -57,11 +57,11 @@ export function Check({ done, color = colors.faint, onPress }) {
 }
 
 // ---------- one task in a list
-export function TaskRow({ task, list, showList = true, showDate = true, overdue, onPress, onToggle }) {
+export function TaskRow({ task, list, showList = true, showDate = true, overdue, onPress, onLongPress, onToggle }) {
   const meta = [];
   const linkHost = task.link ? task.link.replace(/^https?:\/\//, '').split('/')[0] : '';
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => ({ flexDirection: 'row', gap: 14, paddingVertical: 11, paddingHorizontal: 20, backgroundColor: pressed ? '#EDEDF0' : 'transparent' })}>
+    <Pressable onPress={onPress} onLongPress={onLongPress} delayLongPress={400} style={({ pressed }) => ({ flexDirection: 'row', gap: 14, paddingVertical: 11, paddingHorizontal: 20, backgroundColor: pressed ? '#EDEDF0' : 'transparent' })}>
       <Check done={task.done} onPress={onToggle} />
       <View style={{ flex: 1 }}>
         <Text style={{ fontSize: 15, color: task.done ? colors.faint : colors.text, textDecorationLine: task.done ? 'line-through' : 'none' }}>{task.title}</Text>
