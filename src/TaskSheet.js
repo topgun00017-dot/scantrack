@@ -42,7 +42,7 @@ function Chip({ label, active, onPress, color = colors.text }) {
 const Panel = ({ children }) => <View style={{ backgroundColor: '#F7F7F9', borderRadius: 14, padding: 12, marginBottom: 6 }}>{children}</View>;
 
 // `task`: an existing task to edit, or { ...defaults } for a new one (no id).
-export default function TaskSheet({ visible, task, onClose, focus }) {
+export default function TaskSheet({ visible, task, onClose, focus, onAdded }) {
   const { lists, settings, addTask, updateTask, deleteTask } = useStore();
   const [f, setF] = useState(blank);
   const [pick, setPick] = useState(null);
@@ -83,11 +83,12 @@ export default function TaskSheet({ visible, task, onClose, focus }) {
       out.time = null;
       out.repeat = 'none';
     }
+    onClose();
     if (isNew) {
       addTask(out);
       toast('Task added');
+      onAdded && onAdded();
     } else updateTask(task.id, out);
-    onClose();
   };
   const remove = () =>
     showDialog('Delete task?', `"${f.title}" will be removed.`, [

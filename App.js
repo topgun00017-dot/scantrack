@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Actions } from './src/actions';
+import { todayKey } from './src/dates';
 import { BackHandler, Linking, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
@@ -27,15 +28,18 @@ function Shell() {
     push: (name, params = {}) => setStack((s) => [...s, { name, params }]),
     back: () => setStack((s) => (s.length > 1 ? s.slice(0, -1) : s)),
   };
+  // After adding a task: close the input and show Today.
+  const goToday = () => setStack([{ name: 'home', params: {} }, { name: 'list', params: { kind: 'today' } }]);
   const actions = {
     openTask: (task, focus) => setTaskSheet({ task, focus }),
-    quickAdd: (defaults) => setQuick(defaults || {}),
+    // New tasks are dated today unless the screen says otherwise, so they show on Today.
+    quickAdd: (defaults) => setQuick({ date: todayKey(), ...(defaults || {}) }),
     editList: (list, onDeleted) => setListSheet({ list, onDeleted }),
   };
 
   // The widget's + button opens tidy://add → quick add.
   React.useEffect(() => {
-    const handle = (url) => url && url.startsWith('tidy://add') && setQuick({});
+    const handle = (url) => url && url.startsWith('tidy://add') && setQuick({ date: todayKey() });
     Linking.getInitialURL().then(handle).catch(() => {});
     const sub = Linking.addEventListener('url', ({ url }) => handle(url));
     return () => sub.remove();
@@ -66,12 +70,16 @@ function Shell() {
         visible={!!quick}
         defaults={quick || {}}
         onClose={() => setQuick(null)}
+        onAdded={() => {
+          setQuick(null);
+          goToday();
+        }}
         onDetails={(draft, focus) => {
           setQuick(null);
           setTaskSheet({ task: draft, focus });
         }}
       />
-      <TaskSheet visible={!!taskSheet} task={taskSheet?.task} focus={taskSheet?.focus} onClose={() => setTaskSheet(null)} />
+      <TaskSheet visible={!!taskSheet} task={taskSheet?.task} focus={taskSheet?.focus} onClose={() => setTaskSheet(null)} onAdded={goToday} />
       <ListSheet visible={!!listSheet} list={listSheet?.list} onDeleted={listSheet?.onDeleted} onClose={() => setListSheet(null)} />
       <ToastHost />
       <DialogHost />

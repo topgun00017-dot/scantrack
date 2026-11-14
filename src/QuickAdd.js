@@ -1,6 +1,6 @@
 // Quick add bar: type a title and press Enter, or tap a coloured button to add more details.
 import React, { useEffect, useRef, useState } from 'react';
-import { Pressable, TextInput, View } from 'react-native';
+import { Keyboard, Pressable, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from './icons';
 import { colors, shadow } from './theme';
@@ -14,7 +14,7 @@ const BUTTONS = [
   { key: 'note', icon: 'file-text', color: '#D46BA6' },
 ];
 
-export default function QuickAdd({ visible, defaults, onClose, onDetails }) {
+export default function QuickAdd({ visible, defaults, onClose, onDetails, onAdded }) {
   const insets = useSafeAreaInsets();
   const kb = useKeyboardHeight();
   const { addTask } = useStore();
@@ -30,8 +30,9 @@ export default function QuickAdd({ visible, defaults, onClose, onDetails }) {
     if (!t) return onClose();
     addTask({ ...defaults, title: t });
     setTitle('');
+    Keyboard.dismiss();
     toast('Task added');
-    input.current?.focus(); // stay open to add the next one
+    onAdded(); // close and show Today; tap "Add new task" again for the next one
   };
 
   return (
@@ -47,8 +48,7 @@ export default function QuickAdd({ visible, defaults, onClose, onDetails }) {
             placeholderTextColor={colors.faint}
             autoFocus
             returnKeyType="done"
-            submitBehavior="submit"
-            blurOnSubmit={false}
+            submitBehavior="blurAndSubmit"
             onSubmitEditing={add}
             style={{ flex: 1, fontSize: 16, color: colors.text, paddingVertical: 8 }}
           />
