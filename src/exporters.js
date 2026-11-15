@@ -248,7 +248,7 @@ export async function buildAccountantPackage(receipts, settings, period) {
     : `<div class="note">All receipts in this period are categorised and reviewed.</div>`;
   const html = await buildReportHTML({
     title: 'Bookkeeping package',
-    subtitle: `${period.label} · ${prettyDate(period.from)} – ${prettyDate(period.to)}${settings.accountantName ? ` · Prepared for ${settings.accountantName}` : ''}`,
+    subtitle: `${period.label} · ${prettyDate(period.from)} – ${prettyDate(period.to)}${settings.accountantEmail ? ` · Prepared for ${settings.accountantEmail}` : ''}`,
     receipts,
     settings,
     notesBlock: notes,

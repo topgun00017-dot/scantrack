@@ -266,9 +266,8 @@ export default function SettingsScreen({ nav }) {
         <Button small title="Add category" icon="plus" variant="secondary" style={{ marginTop: 8 }} onPress={() => setCatEditor(true)} />
         <CategoryEditor visible={catEditor} onClose={() => setCatEditor(false)} />
 
-        <SectionTitle>{`Accountant for ${active?.name || 'this company'}`}</SectionTitle>
-        <Field label="Accountant name" value={f.accountantName} onChangeText={set('accountantName')} />
-        <Field label="Accountant email" value={f.accountantEmail} onChangeText={set('accountantEmail')} keyboardType="email-address" autoCapitalize="none" />
+        <View style={{ height: 18 }} />
+        <Field label="Account's email" value={f.accountantEmail} onChangeText={set('accountantEmail')} keyboardType="email-address" autoCapitalize="none" />
 
         {webAI ? (
           <>

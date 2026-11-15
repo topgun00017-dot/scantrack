@@ -32,7 +32,7 @@ export default function AccountingScreen({ nav }) {
     { ok: !issues.some((i) => i.type === 'duplicate'), text: 'No duplicate receipts' },
     { ok: !issues.some((i) => i.type === 'no_total'), text: 'Every receipt has a total' },
     { ok: !issues.some((i) => i.type === 'no_image'), text: 'Original image attached to each receipt', soft: true },
-    { ok: !!settings.accountantEmail || !!settings.accountantName, text: "Account's email added", soft: true },
+    { ok: !!settings.accountantEmail, text: "Account's email added", soft: true },
   ];
 
   const handOff = async () => {
@@ -105,8 +105,8 @@ export default function AccountingScreen({ nav }) {
 
         <SectionTitle>Account's email</SectionTitle>
         <Card onPress={() => nav.push('settings')}>
-          <Text style={s.body}>{settings.accountantName || 'Add your accountant'}</Text>
-          <Text style={s.sub}>{settings.accountantEmail || 'Name and email are printed on the package · tap to edit'}</Text>
+          <Text style={s.body}>{settings.accountantEmail || "Add the account's email"}</Text>
+          <Text style={s.sub}>{settings.accountantEmail ? 'Printed on the package · tap to change' : 'Tap to add it in Settings'}</Text>
         </Card>
         <Text style={[s.sub, { marginTop: 12 }]}>The package is one ZIP: summary PDF, CSV, Excel workbook, all receipt photos and a list of any open items.</Text>
       </ScrollView>
