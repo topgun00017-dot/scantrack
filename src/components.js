@@ -1,8 +1,7 @@
 import React from 'react';
-import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { colors, radius } from './theme';
 import { Icon, isIconName } from './icons';
-import { categoryMeta } from './categories';
 import { money, prettyDate, RANGE_PRESETS } from './utils';
 
 export function Header({ title, subtitle, onBack, right }) {
@@ -106,16 +105,12 @@ export function SectionTitle({ children, right }) {
 }
 
 export function ReceiptRow({ r, onPress, selected, onLongPress }) {
-  const c = categoryMeta(r.category);
   return (
     <Pressable onPress={onPress} onLongPress={onLongPress} style={({ pressed }) => [s.row, selected && { borderColor: colors.accent }, pressed && { opacity: 0.85 }]}>
-      {r.imageUri ? (
-        <Image source={{ uri: r.imageUri }} style={s.thumb} />
-      ) : (
-        <View style={[s.thumb, { backgroundColor: c.color + '33', alignItems: 'center', justifyContent: 'center' }]}>
-          <Icon name={c.icon} size={20} color={c.color} />
-        </View>
-      )}
+      {/* iOS-style receipt icon (tinted rounded square + line glyph). The scan itself is shown in the receipt detail. */}
+      <View style={s.receiptIcon}>
+        <Icon name="receipt" size={22} color={colors.accentInk} strokeWidth={1.75} />
+      </View>
       <View style={{ flex: 1, marginLeft: 12 }}>
         <Text style={s.rowTitle} numberOfLines={1}>{r.merchant}</Text>
         <Text style={s.rowSub} numberOfLines={1}>
@@ -177,7 +172,7 @@ export const s = StyleSheet.create({
   label: { color: colors.muted, fontSize: 12, fontWeight: '600', marginBottom: 6 },
   input: { backgroundColor: colors.surface2, color: colors.text, borderRadius: radius.md, paddingHorizontal: 14, paddingVertical: 12, fontSize: 15, borderWidth: 1, borderColor: colors.border },
   row: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface, borderRadius: radius.md, padding: 12, marginBottom: 8, borderWidth: 1, borderColor: colors.border },
-  thumb: { width: 44, height: 44, borderRadius: 10 },
+  receiptIcon: { width: 44, height: 44, borderRadius: 11, backgroundColor: colors.accent + '2E', alignItems: 'center', justifyContent: 'center' },
   rowTitle: { color: colors.text, fontSize: 15, fontWeight: '700' },
   rowSub: { color: colors.muted, fontSize: 12, marginTop: 2 },
   rowAmt: { color: colors.text, fontSize: 15, fontWeight: '700' },
