@@ -43,8 +43,12 @@ async function readImageB64(uri) {
 const HEADERS = ['Date', 'Merchant', 'Category', 'Subtotal', 'Tax', 'Total', 'Currency', 'Payment', 'Tags', 'Notes', 'Status', 'Image file name', 'Image link'];
 // Web link to the receipt photo in Google Drive (once it has been backed up there).
 const imageLink = (r) => (r.driveFileId ? `https://drive.google.com/file/d/${r.driveFileId}/view` : '');
+// For Google Sheets only: a picture of the whole receipt inside the cell (needs the photo shared
+// as "anyone with the link can view", which Drive sync does).
+const PHOTO_HEADER = 'Receipt photo';
+const photoFormula = (r) => (r.driveFileId ? `=IMAGE("https://drive.google.com/thumbnail?id=${r.driveFileId}&sz=w800")` : '');
 
-function rows(receipts) {
+function rows(receipts, photos = false) {
   return receipts.map((r) => [
     r.date,
     r.merchant,
@@ -59,6 +63,7 @@ function rows(receipts) {
     r.status === 'needs_review' ? 'Needs review' : 'OK',
     r.imageUri ? imageName(r) : '',
     imageLink(r),
+    ...(photos ? [photoFormula(r)] : []),
   ]);
 }
 
@@ -69,15 +74,23 @@ const csvCell = (v) => {
   return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 };
 
-export function buildCSV(receipts) {
-  return [HEADERS, ...rows(receipts)].map((r) => r.map(csvCell).join(',')).join('\n');
+export function buildCSV(receipts, photos = false) {
+  return [photos ? [...HEADERS, PHOTO_HEADER] : HEADERS, ...rows(receipts, photos)].map((r) => r.map(csvCell).join(',')).join('\n');
 }
 
-export function buildWorkbookBase64(receipts) {
+export function buildWorkbookBase64(receipts, photos = false) {
   const wb = XLSX.utils.book_new();
-  const data = [HEADERS, ...rows(receipts).map((r) => r.map((v, i) => (i >= 3 && i <= 5 ? Number(v) : v)))];
+  const data = [photos ? [...HEADERS, PHOTO_HEADER] : HEADERS, ...rows(receipts).map((r) => r.map((v, i) => (i >= 3 && i <= 5 ? Number(v) : v)))];
   const ws = XLSX.utils.aoa_to_sheet(data);
-  ws['!cols'] = [12, 26, 16, 10, 10, 10, 8, 12, 20, 24, 12, 30, 48].map((w) => ({ wch: w }));
+  ws['!cols'] = [12, 26, 16, 10, 10, 10, 8, 12, 20, 24, 12, 30, 48, 16].map((w) => ({ wch: w }));
+  if (photos) {
+    receipts.forEach((r, i) => {
+      const f = photoFormula(r);
+      if (f) ws[XLSX.utils.encode_cell({ r: i + 1, c: 13 })] = { t: 's', v: '', f: f.slice(1) };
+    });
+    ws['!ref'] = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: receipts.length, c: 13 } });
+    ws['!rows'] = [{ hpx: 22 }, ...receipts.map(() => ({ hpx: 150 }))];
+  }
   // Make the image links clickable.
   receipts.forEach((r, i) => {
     const url = imageLink(r);

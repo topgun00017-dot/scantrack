@@ -182,6 +182,37 @@ function multipart(meta, mime, base64) {
   return { body, type: `multipart/related; boundary=${b}` };
 }
 
+// Let anyone with the link view the photo, so the Receipt photo column in Google Sheets can show it.
+// Best effort: if sharing is blocked (e.g. by a work account policy) the backup still succeeds.
+async function makePublic(tok, id) {
+  try {
+    await api(tok, `${API}/${id}/permissions?fields=id`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ role: 'reader', type: 'anyone', allowFileDiscovery: false }),
+    });
+  } catch {}
+}
+
+// Make photo rows tall and the photo column wide enough to show whole receipts (best effort).
+const formatted = {};
+async function formatPhotoSheet(tok, id, rowCount) {
+  if (formatted[id] === rowCount) return;
+  try {
+    const info = await api(tok, `https://sheets.googleapis.com/v4/spreadsheets/${id}?fields=sheets.properties(sheetId,index)`);
+    const sheetId = (info?.sheets || []).map((x) => x.properties).find((p) => p.index === 0)?.sheetId ?? 0;
+    const dim = (dimension, startIndex, endIndex, pixelSize) => ({ updateDimensionProperties: { range: { sheetId, dimension, startIndex, endIndex }, properties: { pixelSize }, fields: 'pixelSize' } });
+    await api(tok, `https://sheets.googleapis.com/v4/spreadsheets/${id}:batchUpdate`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ requests: [dim('ROWS', 1, rowCount + 1, 150), dim('COLUMNS', 13, 14, 120)] }),
+    });
+    formatted[id] = rowCount;
+  } catch {
+    // the sheet still works; rows just stay short
+  }
+}
+
 // Upload a new receipt photo, or update name/description/folder of one already uploaded.
 // Returns the fields to store on the receipt.
 export async function syncReceipt(r) {
@@ -197,7 +228,8 @@ export async function syncReceipt(r) {
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify(meta),
       });
-      return { driveFileId: r.driveFileId, driveFolderId: parent };
+      if (!r.drivePublic) await makePublic(tok, r.driveFileId);
+      return { driveFileId: r.driveFileId, driveFolderId: parent, drivePublic: true };
     } catch (e) {
       if (e.status !== 404) throw e; // deleted in Drive: upload it again below
     }
@@ -208,7 +240,8 @@ export async function syncReceipt(r) {
   const mime = /\.png$/i.test(r.imageUri) ? 'image/png' : 'image/jpeg';
   const mp = multipart({ ...meta, parents: [parent] }, mime, base64);
   const made = await api(tok, `${UPLOAD}?uploadType=multipart&fields=id`, { method: 'POST', headers: { 'content-type': mp.type }, body: mp.body });
-  return { driveFileId: made.id, driveFolderId: parent };
+  await makePublic(tok, made.id);
+  return { driveFileId: made.id, driveFolderId: parent, drivePublic: true };
 }
 
 // Move a deleted receipt's photo to the Drive bin (recoverable for 30 days).
@@ -223,11 +256,12 @@ export async function trashFile(fileId) {
 
 // Save an export as a new Google Sheet (converted from the Excel workbook) in this company's
 // ScanTrack folder, so it can be shared online. Returns its link.
-export async function saveAsGoogleSheet(name, xlsxBase64) {
+export async function saveAsGoogleSheet(name, xlsxBase64, rowCount = 0) {
   const tok = await token();
   const root = await companyFolder(tok);
   const mp = multipart({ name, mimeType: 'application/vnd.google-apps.spreadsheet', parents: [root] }, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', xlsxBase64);
   const made = await api(tok, `${UPLOAD}?uploadType=multipart&fields=id,webViewLink`, { method: 'POST', headers: { 'content-type': mp.type }, body: mp.body });
+  await formatPhotoSheet(tok, made.id, rowCount);
   return made.webViewLink || `https://docs.google.com/spreadsheets/d/${made.id}/edit`;
 }
 
@@ -243,7 +277,7 @@ export function sheetUrl() {
 export async function updateSheet(receipts) {
   const tok = await token();
   const root = await companyFolder(tok);
-  const csv = buildCSV(receipts);
+  const csv = buildCSV(receipts, true);
   const ck = companyName || '_';
   let sheetId = sheetIds[ck] || null;
   if (!sheetId) {
@@ -255,6 +289,7 @@ export async function updateSheet(receipts) {
     try {
       await api(tok, `${UPLOAD}/${sheetId}?uploadType=media&fields=id`, { method: 'PATCH', headers: { 'content-type': 'text/csv' }, body: csv });
       sheetIds[ck] = sheetId;
+      await formatPhotoSheet(tok, sheetId, receipts.length);
       return;
     } catch (e) {
       if (e.status !== 404) throw e;
@@ -268,4 +303,5 @@ export async function updateSheet(receipts) {
     `\r\n--${b}\r\nContent-Type: text/csv; charset=UTF-8\r\n\r\n${csv}\r\n--${b}--`;
   const made = await api(tok, `${UPLOAD}?uploadType=multipart&fields=id`, { method: 'POST', headers: { 'content-type': `multipart/related; boundary=${b}` }, body });
   sheetIds[ck] = made.id;
+  await formatPhotoSheet(tok, made.id, receipts.length);
 }

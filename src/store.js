@@ -146,7 +146,8 @@ export function StoreProvider({ children, dataKey = 'scantrack:v1', withSamples 
   const runSync = useCallback(async () => {
     const { receipts: list, settings: st, driveTrash: trash } = latest.current;
     if (!st.driveEnabled || !Drive.driveAvailable() || syncing.current) return;
-    const dirty = list.filter((r) => !r.demo && r.driveDirty);
+    // also share photos uploaded before photos were shared by link (for the Receipt photo column)
+    const dirty = list.filter((r) => !r.demo && (r.driveDirty || (r.driveFileId && !r.drivePublic)));
     if (!dirty.length && !trash.length && !forceSheet.current) return;
     syncing.current = true;
     forceSheet.current = false;
