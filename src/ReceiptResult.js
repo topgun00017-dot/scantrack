@@ -132,7 +132,7 @@ export default function ReceiptResultHost() {
             {(fileLink || sheetLink) && (
               <View style={{ flexDirection: 'row', gap: 8 }}>
                 {fileLink && <Button small title="View in Drive" variant="secondary" style={{ flex: 1 }} onPress={() => Linking.openURL(fileLink)} />}
-                {sheetLink && <Button small title="View spreadsheet" icon="sheet" variant="secondary" style={{ flex: 1 }} onPress={() => Linking.openURL(sheetLink)} />}
+                {sheetLink && <Button small title="View in Google Sheet" icon="sheet" variant="secondary" style={{ flex: 1 }} onPress={() => Linking.openURL(sheetLink)} />}
               </View>
             )}
             <Button title="Done" onPress={close} />
