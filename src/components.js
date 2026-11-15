@@ -1,4 +1,5 @@
 import React from 'react';
+import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { colors, radius } from './theme';
 import { Icon, isIconName } from './icons';
@@ -105,17 +106,42 @@ export function SectionTitle({ children, right }) {
   );
 }
 
+// iOS-style app icon tile: rounded square with a soft top-to-bottom gradient in the category
+// colour and a white receipt glyph. Very light colours fall back to iOS grey so the glyph shows.
+const hexRgb = (h) => {
+  const m = /^#?([0-9a-f]{6})$/i.exec(h || '');
+  const n = m ? parseInt(m[1], 16) : 0x8e8e93;
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+};
+const mix = ([r, g, b], t) => `rgb(${Math.round(r + (255 - r) * t)},${Math.round(g + (255 - g) * t)},${Math.round(b + (255 - b) * t)})`;
+export function ReceiptIcon({ color = colors.accent, size = 44 }) {
+  let rgb = hexRgb(color);
+  const lum = (0.299 * rgb[0] + 0.587 * rgb[1] + 0.114 * rgb[2]) / 255;
+  if (lum > 0.72) rgb = [142, 142, 147]; // too pale for a white glyph
+  const id = `ri${rgb.join('')}`;
+  return (
+    <View style={{ width: size, height: size, borderRadius: size * 0.235, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' }}>
+      <Svg width={size} height={size} style={{ position: 'absolute' }}>
+        <Defs>
+          <LinearGradient id={id} x1="0" y1="0" x2="0" y2="1">
+            <Stop offset="0" stopColor={mix(rgb, 0.22)} />
+            <Stop offset="1" stopColor={`rgb(${rgb.join(',')})`} />
+          </LinearGradient>
+        </Defs>
+        <Rect width={size} height={size} fill={`url(#${id})`} />
+      </Svg>
+      <View style={{ zIndex: 1 }}>
+        <Icon name="receipt" size={size * 0.54} color="#FFFFFF" strokeWidth={2} />
+      </View>
+    </View>
+  );
+}
+
 export function ReceiptRow({ r, onPress, selected, onLongPress }) {
   const c = categoryMeta(r.category);
   return (
     <Pressable onPress={onPress} onLongPress={onLongPress} style={({ pressed }) => [s.row, selected && { borderColor: colors.accent }, pressed && { opacity: 0.85 }]}>
-      {r.imageUri ? (
-        <Image source={{ uri: r.imageUri }} style={s.thumb} />
-      ) : (
-        <View style={[s.thumb, { backgroundColor: c.color + '33', alignItems: 'center', justifyContent: 'center' }]}>
-          <Icon name={c.icon} size={20} color={c.color} />
-        </View>
-      )}
+      <ReceiptIcon color={c.color} />
       <View style={{ flex: 1, marginLeft: 12 }}>
         <Text style={s.rowTitle} numberOfLines={1}>{r.merchant}</Text>
         <Text style={s.rowSub} numberOfLines={1}>
