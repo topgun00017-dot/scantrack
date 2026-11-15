@@ -6,7 +6,8 @@ import { Icon } from '../icons';
 import { colors, shadow } from '../theme';
 import { useStore } from '../store';
 import { useActions } from '../actions';
-import { AddPill, RoundButton } from '../ui';
+import { AddPill, RoundButton, showDialog } from '../ui';
+import { useDailyQuote } from '../quote';
 import { todayKey } from '../dates';
 
 function Tile({ icon, color, title, count, onPress, onLongPress, dashed, width, alert }) {
@@ -39,6 +40,7 @@ export default function HomeScreen({ nav }) {
   const { width } = useWindowDimensions();
   const { lists, tasks } = useStore();
   const { quickAdd, editList } = useActions();
+  const quote = useDailyQuote();
   const tileW = (Math.min(width, 520) - 20 * 2 - 14) / 2;
   const t = todayKey();
   const open = tasks.filter((x) => !x.done);
@@ -48,7 +50,14 @@ export default function HomeScreen({ nav }) {
 
   return (
     <View style={{ flex: 1 }}>
-      <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 10, paddingHorizontal: 20, paddingTop: 8 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 20, paddingTop: 8 }}>
+        <Pressable
+          onPress={() => showDialog('Quote of the day', `“${quote.text}”\n\n— ${quote.author}${quote.web ? '\n\nQuotes provided by ZenQuotes.io' : ''}`)}
+          style={{ flex: 1, minHeight: 40, justifyContent: 'center', paddingRight: 4 }}
+        >
+          <Text numberOfLines={3} style={{ fontSize: 12.5, lineHeight: 17, color: colors.text, fontStyle: 'italic' }}>“{quote.text}”</Text>
+          <Text numberOfLines={1} style={{ fontSize: 11, color: colors.sub, marginTop: 2 }}>— {quote.author}</Text>
+        </Pressable>
         <RoundButton icon="search" onPress={() => nav.push('search')} />
         <RoundButton icon="calendar" onPress={() => nav.push('calendar')} />
         <RoundButton icon="settings" onPress={() => nav.push('settings')} />
