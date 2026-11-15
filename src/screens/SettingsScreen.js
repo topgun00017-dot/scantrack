@@ -12,6 +12,18 @@ import { testAI, cleanKey } from '../ai';
 import { Button, Chip, Field, Header, SectionTitle, s } from '../components';
 import { colors } from '../theme';
 
+// AI settings are behind a password. Only a hash is stored on the phone; until it is changed
+// the default password is ai2026*. This keeps casual users out of the API key settings.
+const DEFAULT_AI_PASSWORD = 'ai2026*';
+const hashPass = (p) => {
+  let h = 0x811c9dc5;
+  for (const ch of `scantrack:${p}`) {
+    h ^= ch.charCodeAt(0);
+    h = Math.imul(h, 0x01000193) >>> 0;
+  }
+  return h.toString(16);
+};
+
 const CURRENCIES = ['MYR', 'SGD', 'USD', 'EUR', 'GBP'];
 
 export default function SettingsScreen({ nav }) {
@@ -36,7 +48,7 @@ export default function SettingsScreen({ nav }) {
   const [connecting, setConnecting] = useState(false);
   // Drive sign-in is saved straight away by the store, so the form must not overwrite it.
   const saveForm = () => {
-    const { driveEnabled, driveEmail, customCategories, ...rest } = f; // these are saved directly by the store
+    const { driveEnabled, driveEmail, customCategories, aiPassHash, ...rest } = f; // these are saved directly by the store
     setSettings(rest);
   };
   const connect = async () => {
@@ -63,6 +75,22 @@ export default function SettingsScreen({ nav }) {
   const set = (k) => (v) => setF((x) => ({ ...x, [k]: v }));
   const demoCount = receipts.filter((r) => r.demo).length;
   const [testing, setTesting] = useState(false);
+  const [aiOpen, setAiOpen] = useState(false); // locked again every time Settings opens
+  const [pw, setPw] = useState(null); // { mode: 'unlock' | 'change', a, b, error }
+  const passOk = (p) => hashPass(p) === (settings.aiPassHash || hashPass(DEFAULT_AI_PASSWORD));
+  const submitPw = () => {
+    if (pw.mode === 'unlock') {
+      if (!passOk(pw.a)) return setPw({ ...pw, a: '', error: 'Wrong password. Try again.' });
+      setAiOpen(true);
+      return setPw(null);
+    }
+    if (!passOk(pw.cur || '')) return setPw({ ...pw, error: 'Current password is wrong.' });
+    if ((pw.a || '').length < 4) return setPw({ ...pw, error: 'Use at least 4 characters.' });
+    if (pw.a !== pw.b) return setPw({ ...pw, error: "The new passwords don't match." });
+    setSettings({ aiPassHash: hashPass(pw.a) });
+    setPw(null);
+    showAlert('Password changed', 'Use the new password next time you open the AI settings.');
+  };
   const openai = f.provider === 'openai';
 
   const test = async () => {
@@ -109,6 +137,39 @@ export default function SettingsScreen({ nav }) {
           </View>
         ))}
         <Button small title="Add company" icon="plus" variant="secondary" style={{ marginTop: 8 }} onPress={() => { setNameError(''); setNameBox({ value: '' }); }} />
+        <Modal visible={!!pw} transparent animationType="fade" onRequestClose={() => setPw(null)}>
+          <Pressable style={{ flex: 1, backgroundColor: '#0008', justifyContent: 'flex-start', paddingTop: 110, paddingHorizontal: 20 }} onPress={() => setPw(null)}>
+            <Pressable style={{ backgroundColor: colors.surface, borderRadius: 18, padding: 20 }} onPress={() => {}}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                <Icon name={pw?.mode === 'change' ? 'lock' : 'lock-open'} size={22} color={colors.accentInk} />
+                <Text style={s.h2}>{pw?.mode === 'change' ? 'Change AI password' : 'Unlock AI settings'}</Text>
+              </View>
+              {pw?.mode === 'change' && (
+                <TextInput value={pw.cur} onChangeText={(v) => setPw((p) => ({ ...p, cur: v, error: '' }))} placeholder="Current password" placeholderTextColor={colors.faint} secureTextEntry autoFocus autoCapitalize="none" autoCorrect={false} style={[s.input, { marginTop: 14 }]} />
+              )}
+              <TextInput
+                value={pw?.a || ''}
+                onChangeText={(v) => setPw((p) => ({ ...p, a: v, error: '' }))}
+                placeholder={pw?.mode === 'change' ? 'New password' : 'Password'}
+                placeholderTextColor={colors.faint}
+                secureTextEntry
+                autoFocus={pw?.mode !== 'change'}
+                autoCapitalize="none"
+                autoCorrect={false}
+                onSubmitEditing={pw?.mode === 'unlock' ? submitPw : undefined}
+                style={[s.input, { marginTop: pw?.mode === 'change' ? 10 : 14 }]}
+              />
+              {pw?.mode === 'change' && (
+                <TextInput value={pw.b} onChangeText={(v) => setPw((p) => ({ ...p, b: v, error: '' }))} placeholder="New password again" placeholderTextColor={colors.faint} secureTextEntry autoCapitalize="none" autoCorrect={false} onSubmitEditing={submitPw} style={[s.input, { marginTop: 10 }]} />
+              )}
+              {!!pw?.error && <Text style={{ color: colors.danger, marginTop: 8 }}>{pw.error}</Text>}
+              <View style={{ flexDirection: 'row', gap: 10, marginTop: 16 }}>
+                <Button title="Cancel" variant="secondary" style={{ flex: 1 }} onPress={() => setPw(null)} />
+                <Button title={pw?.mode === 'change' ? 'Save' : 'Unlock'} style={{ flex: 1 }} onPress={submitPw} />
+              </View>
+            </Pressable>
+          </Pressable>
+        </Modal>
         <Modal visible={!!nameBox} transparent animationType="fade" onRequestClose={() => setNameBox(null)}>
           <Pressable style={{ flex: 1, backgroundColor: '#0008', justifyContent: 'center', padding: 20 }} onPress={() => setNameBox(null)}>
             <Pressable style={{ backgroundColor: colors.surface, borderRadius: 18, padding: 20 }} onPress={() => {}}>
@@ -216,7 +277,18 @@ export default function SettingsScreen({ nav }) {
           </>
         ) : (
           <>
-            <SectionTitle>AI (receipt reading & assistant)</SectionTitle>
+            <SectionTitle right={aiOpen ? <Text style={{ color: colors.accentInk, fontWeight: '700' }} onPress={() => setAiOpen(false)}>Lock</Text> : null}>AI (receipt reading & assistant)</SectionTitle>
+            {!aiOpen ? (
+              <Pressable onPress={() => setPw({ mode: 'unlock', a: '' })} style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.surface, borderRadius: 14, borderWidth: 1, borderColor: colors.border, padding: 14, marginBottom: 8, opacity: pressed ? 0.7 : 1 })}>
+                <Icon name="lock" size={22} color={colors.muted} />
+                <View style={{ flex: 1 }}>
+                  <Text style={[s.body, { fontWeight: '700' }]}>Password protected</Text>
+                  <Text style={s.sub}>Enter the password to view or change the AI settings.</Text>
+                </View>
+                <Text style={{ color: colors.accentInk, fontWeight: '700' }}>Unlock</Text>
+              </Pressable>
+            ) : (
+            <>
             <Text style={s.label}>Provider</Text>
             <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}>
               <Chip label="Claude" active={!openai} onPress={() => set('provider')('claude')} />
@@ -239,6 +311,9 @@ export default function SettingsScreen({ nav }) {
             <Text style={[s.sub, { marginBottom: 8 }]}>
           The key is stored only on this phone and is meant for testing. Before publishing the app, move AI calls to your own server so the key isn't shipped in the app.
             </Text>
+            <Button small title="Change AI password" icon="lock" variant="secondary" onPress={() => setPw({ mode: 'change', cur: '', a: '', b: '' })} style={{ marginBottom: 8 }} />
+            </>
+            )}
 
           </>
         )}

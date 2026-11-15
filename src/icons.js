@@ -4,6 +4,8 @@ import React from 'react';
 import Wallet from 'lucide-react-native/icons/wallet';
 import Receipt from 'lucide-react-native/icons/receipt';
 import Camera from 'lucide-react-native/icons/camera';
+import Lock from 'lucide-react-native/icons/lock';
+import LockOpen from 'lucide-react-native/icons/lock-open';
 import Sparkles from 'lucide-react-native/icons/sparkles';
 import Menu from 'lucide-react-native/icons/menu';
 import Package from 'lucide-react-native/icons/package';
@@ -66,6 +68,8 @@ const ICONS = {
   wallet: Wallet,
   receipt: Receipt,
   camera: Camera,
+  lock: Lock,
+  'lock-open': LockOpen,
   sparkles: Sparkles,
   menu: Menu,
   package: Package,
