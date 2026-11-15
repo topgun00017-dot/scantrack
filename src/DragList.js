@@ -1,15 +1,15 @@
-// Drag-to-reorder list: hold the ≡ handle and slide a task up or down; let go to drop it.
+// Drag-to-reorder list: press a task and slide it up or down; let go to drop it.
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, PanResponder, Text, View } from 'react-native';
-import { Icon } from './icons';
 import { colors } from './theme';
 
 export const ROW = 58;
 
-function Handle({ onStart, onMove, onEnd }) {
+// Pan handlers for a whole row: touch anywhere on the task and slide it up or down.
+function useDrag({ onStart, onMove, onEnd }) {
   const cbs = useRef({});
   cbs.current = { onStart, onMove, onEnd };
-  const pr = useRef(
+  return useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onStartShouldSetPanResponderCapture: () => true,
@@ -21,11 +21,40 @@ function Handle({ onStart, onMove, onEnd }) {
       onPanResponderRelease: () => cbs.current.onEnd(),
       onPanResponderTerminate: () => cbs.current.onEnd(),
     })
-  ).current;
+  ).current.panHandlers;
+}
+
+function Row({ task, list, top, active, onStart, onMove, onEnd }) {
+  const handlers = useDrag({ onStart, onMove, onEnd });
   return (
-    <View {...pr.panHandlers} hitSlop={8} style={{ width: 48, height: ROW, alignItems: 'center', justifyContent: 'center' }}>
-      <Icon name="grip-vertical" size={20} color={colors.sub} />
-    </View>
+    <Animated.View
+      {...handlers}
+      style={{
+        position: 'absolute',
+        left: 0,
+        right: 0,
+        top,
+        height: ROW,
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: active ? colors.surface : 'transparent',
+        zIndex: active ? 10 : 1,
+        elevation: active ? 6 : 0,
+        shadowColor: '#000',
+        shadowOpacity: active ? 0.15 : 0,
+        shadowRadius: 8,
+        shadowOffset: { width: 0, height: 3 },
+        borderRadius: active ? 12 : 0,
+        marginHorizontal: active ? 6 : 0,
+        transform: [{ scale: active ? 1.02 : 1 }],
+      }}
+    >
+      <View style={{ width: 22, height: 22, borderRadius: 11, borderWidth: 1.6, borderColor: colors.faint, marginLeft: 20, marginRight: 14 }} />
+      <View style={{ flex: 1, paddingRight: 20 }}>
+        <Text numberOfLines={1} style={{ fontSize: 15, color: colors.text }}>{task.title}</Text>
+        {list && <Text numberOfLines={1} style={{ fontSize: 12, color: list.color, fontWeight: '600', marginTop: 2 }}>{list.name}</Text>}
+      </View>
+    </Animated.View>
   );
 }
 
@@ -77,37 +106,7 @@ export default function DragList({ items, lists, onDrop, onDragging }) {
         if (!t) return null;
         const active = drag?.id === id;
         const top = active ? drag.from * ROW + drag.dy : slotOf(i) * ROW;
-        const list = lists.find((l) => l.id === t.listId);
-        return (
-          <Animated.View
-            key={id}
-            style={{
-              position: 'absolute',
-              left: 0,
-              right: 0,
-              top,
-              height: ROW,
-              flexDirection: 'row',
-              alignItems: 'center',
-              backgroundColor: active ? colors.surface : 'transparent',
-              zIndex: active ? 10 : 1,
-              elevation: active ? 6 : 0,
-              shadowColor: '#000',
-              shadowOpacity: active ? 0.15 : 0,
-              shadowRadius: 8,
-              shadowOffset: { width: 0, height: 3 },
-              borderRadius: active ? 12 : 0,
-              marginHorizontal: active ? 6 : 0,
-            }}
-          >
-            <View style={{ width: 22, height: 22, borderRadius: 11, borderWidth: 1.6, borderColor: colors.faint, marginLeft: 20, marginRight: 14 }} />
-            <View style={{ flex: 1 }}>
-              <Text numberOfLines={1} style={{ fontSize: 15, color: colors.text }}>{t.title}</Text>
-              {list && <Text numberOfLines={1} style={{ fontSize: 12, color: list.color, fontWeight: '600', marginTop: 2 }}>{list.name}</Text>}
-            </View>
-            <Handle onStart={() => start(id)} onMove={move} onEnd={end} />
-          </Animated.View>
-        );
+        return <Row key={id} task={t} list={lists.find((l) => l.id === t.listId)} top={top} active={active} onStart={() => start(id)} onMove={move} onEnd={end} />;
       })}
     </View>
   );

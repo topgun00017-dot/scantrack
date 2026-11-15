@@ -93,7 +93,7 @@ export default function ListScreen({ nav, params }) {
         <ScrollView scrollEnabled={!dragging} contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}>
           <View style={{ paddingHorizontal: 20, marginTop: 8 }}>
             <Text style={{ fontSize: 26, fontWeight: '600', color: colors.text }}>{head.title}</Text>
-            <Text style={{ fontSize: 13, color: colors.sub, marginTop: 4 }}>Hold ≡ and drag a task up or down. Tap Done when finished.</Text>
+            <Text style={{ fontSize: 13, color: colors.sub, marginTop: 4 }}>Press a task and drag it up or down. Tap Done when finished.</Text>
           </View>
           <Section title="Overdue" color={colors.overdue} count={overdue.length}>{drag(overdue)}</Section>
           <Section title="Today" count={today.length}>{drag(today)}</Section>
