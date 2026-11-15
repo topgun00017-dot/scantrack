@@ -6,18 +6,21 @@ import React, { useMemo, useState } from 'react';
 import { Alert, ScrollView, Text, View } from 'react-native';
 import { useStore } from '../store';
 import { buildAccountantPackage, deliver } from '../exporters';
-import { Button, Card, Header, RangePicker, SectionTitle, Stat, s } from '../components';
+import { Button, Card, Header, SectionTitle, Stat, s } from '../components';
+import { DateBox } from './ExportScreen';
 import { colors } from '../theme';
-import { filterReceipts, findIssues, ISSUE_LABELS, money, prettyDate, RANGE_PRESETS, rangeFor, sum } from '../utils';
+import { filterReceipts, findIssues, ISSUE_LABELS, money, prettyDate, sum, toISO } from '../utils';
 
 export default function AccountingScreen({ nav }) {
   // Keep the fixed bottom button clear of Android's navigation bar.
   const bottomInset = useSafeAreaInsets().bottom;
   const { receipts, settings, deleteReceipt, updateReceipt } = useStore();
-  const [preset, setPreset] = useState('this_year');
+  // Date range picked with From / To (starts on 1 Jan this year → today).
+  const [from, setFrom] = useState(`${new Date().getFullYear()}-01-01`);
+  const [to, setTo] = useState(toISO(new Date()));
   const [busy, setBusy] = useState(false);
-  const range = rangeFor(preset);
-  const list = useMemo(() => filterReceipts(receipts, range), [receipts, preset]);
+  const range = from <= to ? { from, to } : { from: to, to: from };
+  const list = useMemo(() => filterReceipts(receipts, range), [receipts, range.from, range.to]);
   const issues = useMemo(() => findIssues(list), [list]);
   const blocking = issues.filter((i) => i.type !== 'no_image');
   const ready = list.length ? Math.round(((list.length - new Set(blocking.map((i) => i.id)).size) / list.length) * 100) : 100;
@@ -29,13 +32,13 @@ export default function AccountingScreen({ nav }) {
     { ok: !issues.some((i) => i.type === 'duplicate'), text: 'No duplicate receipts' },
     { ok: !issues.some((i) => i.type === 'no_total'), text: 'Every receipt has a total' },
     { ok: !issues.some((i) => i.type === 'no_image'), text: 'Original image attached to each receipt', soft: true },
-    { ok: !!settings.accountantEmail || !!settings.accountantName, text: 'Accountant details added', soft: true },
+    { ok: !!settings.accountantEmail || !!settings.accountantName, text: "Account's email added", soft: true },
   ];
 
   const handOff = async () => {
     setBusy(true);
     try {
-      const out = await buildAccountantPackage(list, settings, { ...range, label: RANGE_PRESETS.find((p) => p.key === preset).label });
+      const out = await buildAccountantPackage(list, settings, { ...range, label: `${prettyDate(range.from)} – ${prettyDate(range.to)}` });
       await deliver(out, settings.accountantEmail ? `Send to ${settings.accountantEmail}` : 'Send to your accountant');
     } catch (e) {
       showAlert('Could not build package', e.message);
@@ -67,7 +70,10 @@ export default function AccountingScreen({ nav }) {
     <View style={{ flex: 1 }}>
       <Header title="Prepare for accounting" onBack={nav.back} />
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 120 + bottomInset }}>
-        <RangePicker value={preset} onChange={setPreset} />
+        <View style={{ flexDirection: 'row', gap: 10 }}>
+          <DateBox label="From" value={from} onChange={setFrom} />
+          <DateBox label="To" value={to} onChange={setTo} />
+        </View>
         <View style={{ flexDirection: 'row', gap: 10, marginTop: 12 }}>
           <Stat label="Readiness" value={`${ready}%`} tone={ready === 100 ? colors.success : colors.warning} />
           <Stat label="Total" value={money(sum(list), settings.currency)} />
@@ -97,7 +103,7 @@ export default function AccountingScreen({ nav }) {
           </Card>
         ))}
 
-        <SectionTitle>Accountant</SectionTitle>
+        <SectionTitle>Account's email</SectionTitle>
         <Card onPress={() => nav.push('settings')}>
           <Text style={s.body}>{settings.accountantName || 'Add your accountant'}</Text>
           <Text style={s.sub}>{settings.accountantEmail || 'Name and email are printed on the package · tap to edit'}</Text>
@@ -105,7 +111,7 @@ export default function AccountingScreen({ nav }) {
         <Text style={[s.sub, { marginTop: 12 }]}>The package is one ZIP: summary PDF, CSV, Excel workbook, all receipt photos and a list of any open items.</Text>
       </ScrollView>
       <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: 16, paddingBottom: 16 + bottomInset, backgroundColor: colors.surface, borderTopWidth: 1, borderColor: colors.border }}>
-        <Button title="Build package & send to accountant" icon="package-open" loading={busy} disabled={!list.length} onPress={confirmHandOff} />
+        <Button title="Send To Accounts" icon="package-open" loading={busy} disabled={!list.length} onPress={confirmHandOff} />
       </View>
     </View>
   );

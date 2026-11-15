@@ -49,7 +49,7 @@ const isoToDate = (iso) => {
 };
 
 // A tappable date box. Android opens the system calendar; elsewhere (web preview) it's a text field.
-function DateBox({ label, value, onChange }) {
+export function DateBox({ label, value, onChange }) {
   const box = { flex: 1, backgroundColor: colors.surface, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, padding: 12 };
   if (Platform.OS !== 'android') return <TypedDate label={label} value={value} onChange={onChange} style={box} />;
   return (
