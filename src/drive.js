@@ -221,6 +221,16 @@ export async function trashFile(fileId) {
   }
 }
 
+// Save an export as a new Google Sheet (converted from the Excel workbook) in this company's
+// ScanTrack folder, so it can be shared online. Returns its link.
+export async function saveAsGoogleSheet(name, xlsxBase64) {
+  const tok = await token();
+  const root = await companyFolder(tok);
+  const mp = multipart({ name, mimeType: 'application/vnd.google-apps.spreadsheet', parents: [root] }, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', xlsxBase64);
+  const made = await api(tok, `${UPLOAD}?uploadType=multipart&fields=id,webViewLink`, { method: 'POST', headers: { 'content-type': mp.type }, body: mp.body });
+  return made.webViewLink || `https://docs.google.com/spreadsheets/d/${made.id}/edit`;
+}
+
 // Keep a Google Sheet listing every receipt in the ScanTrack Receipts folder.
 const sheetIds = {}; // per company
 // Links for the "Receipt saved" panel.

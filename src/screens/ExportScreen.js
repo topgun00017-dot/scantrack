@@ -4,10 +4,11 @@ import { showAlert } from '../platform';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '../icons';
 import React, { useMemo, useState } from 'react';
-import { Modal, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Linking, Modal, Platform, Pressable, ScrollView, Share, Text, TextInput, View } from 'react-native';
 import { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
 import { useStore } from '../store';
-import { exportReceipts, deliver } from '../exporters';
+import { buildWorkbookBase64, exportReceipts, deliver } from '../exporters';
+import * as Drive from '../drive';
 import { Button, Card, Chip, Header, s } from '../components';
 import { colors, radius } from '../theme';
 import { CATEGORIES } from '../categories';
@@ -29,6 +30,7 @@ const FORMATS = [
   { key: 'xlsx', icon: 'file-spreadsheet', label: 'Excel' },
   { key: 'csv', icon: 'sheet', label: 'CSV' },
   { key: 'zip', icon: 'file-archive', label: 'ZIP' },
+  { key: 'gsheet', icon: 'sheet', label: 'Sheets' },
 ];
 
 const LAYOUTS = [
@@ -41,6 +43,7 @@ const FORMAT_NOTE = {
   xlsx: 'Workbook with receipts, a category summary and line items.',
   csv: 'One row per receipt. Opens in any spreadsheet or accounting software.',
   zip: 'CSV + Excel + every original receipt photo in one file.',
+  gsheet: 'Saves a copy as a Google Sheet in your Google Drive (ScanTrack Receipts › this company), ready to share online. The Image link column opens each receipt photo.',
 };
 
 const isoToDate = (iso) => {
@@ -137,6 +140,18 @@ export default function ExportScreen({ nav, params }) {
       const subtitle = preselected
         ? `${list.length} selected receipts`
         : `${prettyDate(range.from)} – ${prettyDate(range.to)} · ${category || 'All categories'} · ${list.length} receipts`;
+      if (format === 'gsheet') {
+        if (!settings.driveEnabled) {
+          showAlert('Sign in to Google Drive first', 'Go to Settings › Google Drive backup and sign in, then try again.');
+          return;
+        }
+        const url = await Drive.saveAsGoogleSheet(`ScanTrack ${base.replace(/^receipts_?/, '').replace(/_/g, ' ') || 'receipts'}`.trim(), buildWorkbookBase64(list));
+        showAlert('Saved to Google Sheets', 'A copy is in your Google Drive under ScanTrack Receipts. Open it and tap Share to give your users access.', [
+          { text: 'Share link', onPress: () => Share.share({ message: url }) },
+          { text: 'Open', onPress: () => Linking.openURL(url) },
+        ]);
+        return;
+      }
       const out = await exportReceipts(format, list, settings, base, { layout, subtitle });
       await deliver(out, 'Export receipts');
     } catch (e) {
@@ -253,7 +268,7 @@ export default function ExportScreen({ nav, params }) {
         <Text style={[s.sub, { marginBottom: 8, textAlign: 'center' }]}>
           {list.length} receipt{list.length === 1 ? '' : 's'} · {money(sum(list), settings.currency)}
         </Text>
-        <Button title="Export" icon="download" loading={busy} disabled={!list.length} onPress={go} />
+        <Button title={format === 'gsheet' ? 'Save to Google Sheets' : 'Export'} icon={format === 'gsheet' ? 'sheet' : 'download'} loading={busy} disabled={!list.length} onPress={go} />
       </View>
     </View>
   );

@@ -40,7 +40,9 @@ async function readImageB64(uri) {
 }
 
 // ---------- rows ----------
-const HEADERS = ['Date', 'Merchant', 'Category', 'Subtotal', 'Tax', 'Total', 'Currency', 'Payment', 'Tags', 'Notes', 'Status', 'Image file'];
+const HEADERS = ['Date', 'Merchant', 'Category', 'Subtotal', 'Tax', 'Total', 'Currency', 'Payment', 'Tags', 'Notes', 'Status', 'Image file name', 'Image link'];
+// Web link to the receipt photo in Google Drive (once it has been backed up there).
+const imageLink = (r) => (r.driveFileId ? `https://drive.google.com/file/d/${r.driveFileId}/view` : '');
 
 function rows(receipts) {
   return receipts.map((r) => [
@@ -56,6 +58,7 @@ function rows(receipts) {
     r.notes || '',
     r.status === 'needs_review' ? 'Needs review' : 'OK',
     r.imageUri ? imageName(r) : '',
+    imageLink(r),
   ]);
 }
 
@@ -70,11 +73,17 @@ export function buildCSV(receipts) {
   return [HEADERS, ...rows(receipts)].map((r) => r.map(csvCell).join(',')).join('\n');
 }
 
-function buildWorkbookBase64(receipts) {
+export function buildWorkbookBase64(receipts) {
   const wb = XLSX.utils.book_new();
   const data = [HEADERS, ...rows(receipts).map((r) => r.map((v, i) => (i >= 3 && i <= 5 ? Number(v) : v)))];
   const ws = XLSX.utils.aoa_to_sheet(data);
-  ws['!cols'] = [12, 26, 16, 10, 10, 10, 8, 12, 20, 24, 12, 30].map((w) => ({ wch: w }));
+  ws['!cols'] = [12, 26, 16, 10, 10, 10, 8, 12, 20, 24, 12, 30, 48].map((w) => ({ wch: w }));
+  // Make the image links clickable.
+  receipts.forEach((r, i) => {
+    const url = imageLink(r);
+    const cell = ws[XLSX.utils.encode_cell({ r: i + 1, c: 12 })];
+    if (url && cell) cell.l = { Target: url, Tooltip: 'Open receipt photo' };
+  });
   XLSX.utils.book_append_sheet(wb, ws, 'Receipts');
 
   const cat = byCategory(receipts).map((c) => [c.category, c.count, +c.tax.toFixed(2), +c.total.toFixed(2)]);
@@ -266,7 +275,7 @@ export async function buildAccountantPackage(receipts, settings, period) {
     'README.txt',
     `Bookkeeping package from ${settings.name || 'ScanTrack user'}${settings.company ? ` (${settings.company})` : ''}\n` +
       `Period: ${period.from} to ${period.to}\nReceipts: ${receipts.length}\nTotal: ${money(sum(receipts), settings.currency)}\nTax: ${money(sum(receipts, 'tax'), settings.currency)}\n\n` +
-      `Files:\n  summary       - totals by category and itemised list\n  receipts.csv  - one row per receipt\n  receipts.xlsx - receipts, category summary, line items\n  images/       - original receipt photos (file names match the "Image file" column)\n`
+      `Files:\n  summary       - totals by category and itemised list\n  receipts.csv  - one row per receipt\n  receipts.xlsx - receipts, category summary, line items\n  images/       - original receipt photos (file names match the "Image file name" column)\n`
   );
   await addImages(zip, receipts);
   return emit(`bookkeeping_${period.from}_${period.to}.zip`, await zip.generateAsync({ type: 'base64' }), 'application/zip', true);
