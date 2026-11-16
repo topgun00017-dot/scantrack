@@ -194,22 +194,44 @@ async function makePublic(tok, id) {
   } catch {}
 }
 
-// Make photo rows tall and the photo column wide enough to show whole receipts (best effort).
-const formatted = {};
+// Lay out the photo sheet (best effort, after every upload because a CSV update resets it):
+// short rows with thumbnails, tick boxes in Preview, the photo address hidden, and a large merged
+// preview box (Q2:W8, about 490 × 500 px) that shows whichever receipt is ticked.
 async function formatPhotoSheet(tok, id, rowCount) {
-  if (formatted[id] === rowCount) return;
   try {
     const info = await api(tok, `https://sheets.googleapis.com/v4/spreadsheets/${id}?fields=sheets.properties(sheetId,index)`);
     const sheetId = (info?.sheets || []).map((x) => x.properties).find((p) => p.index === 0)?.sheetId ?? 0;
-    const dim = (dimension, startIndex, endIndex, pixelSize) => ({ updateDimensionProperties: { range: { sheetId, dimension, startIndex, endIndex }, properties: { pixelSize }, fields: 'pixelSize' } });
-    await api(tok, `https://sheets.googleapis.com/v4/spreadsheets/${id}:batchUpdate`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ requests: [dim('ROWS', 1, rowCount + 1, 72), dim('COLUMNS', 12, 13, 120), dim('COLUMNS', 13, 14, 64)] }),
-    });
-    formatted[id] = rowCount;
+    const last = rowCount + 1;
+    const range = (r0, r1, c0, c1) => ({ sheetId, startRowIndex: r0, endRowIndex: r1, startColumnIndex: c0, endColumnIndex: c1 });
+    const dim = (dimension, startIndex, endIndex, properties, fields) => ({ updateDimensionProperties: { range: { sheetId, dimension, startIndex, endIndex }, properties, fields } });
+    const preview =
+      '=IFERROR(IMAGE(INDEX(FILTER(O2:O, N2:N=TRUE), 1)), "Tick the Preview box next to a receipt to see it here")';
+    const batch = (requests) =>
+      api(tok, `https://sheets.googleapis.com/v4/spreadsheets/${id}:batchUpdate`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ requests }) });
+    await batch([
+      dim('ROWS', 1, Math.max(last, 8), { pixelSize: 72 }, 'pixelSize'),
+      dim('COLUMNS', 12, 13, { pixelSize: 64 }, 'pixelSize'),
+      dim('COLUMNS', 13, 14, { pixelSize: 70 }, 'pixelSize'),
+      dim('COLUMNS', 14, 15, { hiddenByUser: true }, 'hiddenByUser'),
+      dim('COLUMNS', 16, 23, { pixelSize: 70 }, 'pixelSize'),
+      { setDataValidation: { range: range(1, last, 13, 14), rule: { condition: { type: 'BOOLEAN' } } } },
+    ]);
+    await batch([{ unmergeCells: { range: range(1, 8, 16, 23) } }]).catch(() => {});
+    await batch([
+      { mergeCells: { range: range(1, 8, 16, 23), mergeType: 'MERGE_ALL' } },
+      {
+        updateCells: {
+          range: range(0, 2, 16, 17),
+          rows: [
+            { values: [{ userEnteredValue: { stringValue: 'Receipt preview' }, userEnteredFormat: { textFormat: { bold: true } } }] },
+            { values: [{ userEnteredValue: { formulaValue: preview }, userEnteredFormat: { horizontalAlignment: 'CENTER', verticalAlignment: 'MIDDLE', wrapStrategy: 'WRAP', textFormat: { foregroundColor: { red: 0.45, green: 0.45, blue: 0.5 } } } }] },
+          ],
+          fields: 'userEnteredValue,userEnteredFormat(horizontalAlignment,verticalAlignment,wrapStrategy,textFormat)',
+        },
+      },
+    ]);
   } catch {
-    // the sheet still works; rows just stay short
+    // the sheet still works without the layout
   }
 }
 

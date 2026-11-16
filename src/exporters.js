@@ -43,11 +43,13 @@ async function readImageB64(uri) {
 const HEADERS = ['Date', 'Merchant', 'Category', 'Subtotal', 'Tax', 'Total', 'Currency', 'Payment', 'Tags', 'Notes', 'Status', 'Image file name', 'Image link'];
 // Web link to the receipt photo in Google Drive (once it has been backed up there).
 const imageLink = (r) => (r.driveFileId ? `https://drive.google.com/file/d/${r.driveFileId}/view` : '');
-// For Google Sheets only: a picture of the whole receipt inside the cell (needs the photo shared
-// as "anyone with the link can view", which Drive sync does).
-const PHOTO_HEADER = 'Receipt photo';
-const OPEN_LABEL = 'Open receipt ↗';
-const photoFormula = (r) => (r.driveFileId ? `=IMAGE("https://drive.google.com/thumbnail?id=${r.driveFileId}&sz=w400")` : '');
+// Google Sheets layout (photos = true): the Image link column is replaced by
+//   M Receipt photo (thumbnail) · N Preview (tick box) · O photo address (hidden)
+// and a large preview box to the right shows whichever receipt is ticked (set up in drive.js).
+export const SHEET_PHOTO_COL = 12;
+const SHEET_HEADERS = [...HEADERS.slice(0, 12), 'Receipt photo', 'Preview', 'Photo address'];
+const thumbUrl = (r, w) => (r.driveFileId ? `https://drive.google.com/thumbnail?id=${r.driveFileId}&sz=w${w}` : '');
+const photoFormula = (r) => (r.driveFileId ? `=IMAGE("${thumbUrl(r, 400)}")` : '');
 
 function rows(receipts, photos = false) {
   return receipts.map((r) => [
@@ -63,9 +65,7 @@ function rows(receipts, photos = false) {
     r.notes || '',
     r.status === 'needs_review' ? 'Needs review' : 'OK',
     r.imageUri ? imageName(r) : '',
-    // In Google Sheets a short "Open receipt" link sits next to the thumbnail; elsewhere the plain URL.
-    photos && imageLink(r) ? `=HYPERLINK("${imageLink(r)}","${OPEN_LABEL}")` : imageLink(r),
-    ...(photos ? [photoFormula(r)] : []),
+    ...(photos ? [photoFormula(r), 'FALSE', thumbUrl(r, 1600)] : [imageLink(r)]),
   ]);
 }
 
@@ -77,31 +77,27 @@ const csvCell = (v) => {
 };
 
 export function buildCSV(receipts, photos = false) {
-  return [photos ? [...HEADERS, PHOTO_HEADER] : HEADERS, ...rows(receipts, photos)].map((r) => r.map(csvCell).join(',')).join('\n');
+  return [photos ? SHEET_HEADERS : HEADERS, ...rows(receipts, photos)].map((r) => r.map(csvCell).join(',')).join('\n');
 }
 
 export function buildWorkbookBase64(receipts, photos = false) {
   const wb = XLSX.utils.book_new();
-  const data = [photos ? [...HEADERS, PHOTO_HEADER] : HEADERS, ...rows(receipts).map((r) => r.map((v, i) => (i >= 3 && i <= 5 ? Number(v) : v)))];
+  const data = [photos ? SHEET_HEADERS : HEADERS, ...rows(receipts, photos).map((r) => r.map((v, i) => (i >= 3 && i <= 5 ? Number(v) : v)))];
   const ws = XLSX.utils.aoa_to_sheet(data);
-  ws['!cols'] = [12, 26, 16, 10, 10, 10, 8, 12, 20, 24, 12, 30, photos ? 16 : 48, 10].map((w) => ({ wch: w }));
-  if (photos) {
-    receipts.forEach((r, i) => {
-      const f = photoFormula(r);
-      if (f) ws[XLSX.utils.encode_cell({ r: i + 1, c: 13 })] = { t: 's', v: '', f: f.slice(1) };
-    });
-    ws['!ref'] = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: receipts.length, c: 13 } });
-    ws['!rows'] = [{ hpx: 22 }, ...receipts.map(() => ({ hpx: 72 }))];
-  }
-  // Make the image links clickable.
+  ws['!cols'] = [12, 26, 16, 10, 10, 10, 8, 12, 20, 24, 12, 30, photos ? 10 : 48, 9, 20].map((w) => ({ wch: w }));
   receipts.forEach((r, i) => {
-    const url = imageLink(r);
-    const cell = ws[XLSX.utils.encode_cell({ r: i + 1, c: 12 })];
-    if (url && cell) {
-      if (photos) cell.v = OPEN_LABEL; // short clickable text next to the thumbnail
-      cell.l = { Target: url, Tooltip: 'Open receipt photo' };
+    const at = (c) => ws[XLSX.utils.encode_cell({ r: i + 1, c })];
+    if (photos) {
+      const f = photoFormula(r);
+      ws[XLSX.utils.encode_cell({ r: i + 1, c: 12 })] = f ? { t: 's', v: '', f: f.slice(1) } : { t: 's', v: '' };
+      ws[XLSX.utils.encode_cell({ r: i + 1, c: 13 })] = { t: 'b', v: false };
+    } else {
+      // Make the image links clickable.
+      const url = imageLink(r);
+      if (url && at(12)) at(12).l = { Target: url, Tooltip: 'Open receipt photo' };
     }
   });
+  if (photos) ws['!rows'] = [{ hpx: 22 }, ...receipts.map(() => ({ hpx: 72 }))];
   XLSX.utils.book_append_sheet(wb, ws, 'Receipts');
 
   const cat = byCategory(receipts).map((c) => [c.category, c.count, +c.tax.toFixed(2), +c.total.toFixed(2)]);
