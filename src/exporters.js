@@ -46,7 +46,8 @@ const imageLink = (r) => (r.driveFileId ? `https://drive.google.com/file/d/${r.d
 // For Google Sheets only: a picture of the whole receipt inside the cell (needs the photo shared
 // as "anyone with the link can view", which Drive sync does).
 const PHOTO_HEADER = 'Receipt photo';
-const photoFormula = (r) => (r.driveFileId ? `=IMAGE("https://drive.google.com/thumbnail?id=${r.driveFileId}&sz=w800")` : '');
+const OPEN_LABEL = 'Open receipt ↗';
+const photoFormula = (r) => (r.driveFileId ? `=IMAGE("https://drive.google.com/thumbnail?id=${r.driveFileId}&sz=w400")` : '');
 
 function rows(receipts, photos = false) {
   return receipts.map((r) => [
@@ -62,7 +63,8 @@ function rows(receipts, photos = false) {
     r.notes || '',
     r.status === 'needs_review' ? 'Needs review' : 'OK',
     r.imageUri ? imageName(r) : '',
-    imageLink(r),
+    // In Google Sheets a short "Open receipt" link sits next to the thumbnail; elsewhere the plain URL.
+    photos && imageLink(r) ? `=HYPERLINK("${imageLink(r)}","${OPEN_LABEL}")` : imageLink(r),
     ...(photos ? [photoFormula(r)] : []),
   ]);
 }
@@ -82,20 +84,23 @@ export function buildWorkbookBase64(receipts, photos = false) {
   const wb = XLSX.utils.book_new();
   const data = [photos ? [...HEADERS, PHOTO_HEADER] : HEADERS, ...rows(receipts).map((r) => r.map((v, i) => (i >= 3 && i <= 5 ? Number(v) : v)))];
   const ws = XLSX.utils.aoa_to_sheet(data);
-  ws['!cols'] = [12, 26, 16, 10, 10, 10, 8, 12, 20, 24, 12, 30, 48, 16].map((w) => ({ wch: w }));
+  ws['!cols'] = [12, 26, 16, 10, 10, 10, 8, 12, 20, 24, 12, 30, photos ? 16 : 48, 10].map((w) => ({ wch: w }));
   if (photos) {
     receipts.forEach((r, i) => {
       const f = photoFormula(r);
       if (f) ws[XLSX.utils.encode_cell({ r: i + 1, c: 13 })] = { t: 's', v: '', f: f.slice(1) };
     });
     ws['!ref'] = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: receipts.length, c: 13 } });
-    ws['!rows'] = [{ hpx: 22 }, ...receipts.map(() => ({ hpx: 150 }))];
+    ws['!rows'] = [{ hpx: 22 }, ...receipts.map(() => ({ hpx: 72 }))];
   }
   // Make the image links clickable.
   receipts.forEach((r, i) => {
     const url = imageLink(r);
     const cell = ws[XLSX.utils.encode_cell({ r: i + 1, c: 12 })];
-    if (url && cell) cell.l = { Target: url, Tooltip: 'Open receipt photo' };
+    if (url && cell) {
+      if (photos) cell.v = OPEN_LABEL; // short clickable text next to the thumbnail
+      cell.l = { Target: url, Tooltip: 'Open receipt photo' };
+    }
   });
   XLSX.utils.book_append_sheet(wb, ws, 'Receipts');
 

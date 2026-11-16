@@ -205,7 +205,7 @@ async function formatPhotoSheet(tok, id, rowCount) {
     await api(tok, `https://sheets.googleapis.com/v4/spreadsheets/${id}:batchUpdate`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ requests: [dim('ROWS', 1, rowCount + 1, 150), dim('COLUMNS', 13, 14, 120)] }),
+      body: JSON.stringify({ requests: [dim('ROWS', 1, rowCount + 1, 72), dim('COLUMNS', 12, 13, 120), dim('COLUMNS', 13, 14, 64)] }),
     });
     formatted[id] = rowCount;
   } catch {
