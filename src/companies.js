@@ -4,6 +4,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system/legacy';
+import { L } from './i18n';
 
 const COMPANIES_KEY = 'scantrack:companies';
 const APP_KEY = 'scantrack:app';
@@ -51,7 +52,7 @@ export function CompaniesProvider({ children }) {
           active = oldProfiles.activeId;
         } else {
           const legacy = await readJSON(LEGACY_DATA_KEY);
-          const name = legacy?.settings?.company || 'My Company';
+          const name = legacy?.settings?.company || L('My Company', '我的公司');
           list = [{ id: 'c_first', name, color: COMPANY_COLORS[0], dataKey: LEGACY_DATA_KEY, first: true }];
           active = 'c_first';
         }
@@ -87,9 +88,9 @@ export function CompaniesProvider({ children }) {
 
   const checkName = (name, exceptId) => {
     const clean = String(name || '').replace(/\s+/g, ' ').trim();
-    if (!clean) throw new Error('Type a company name.');
-    if (clean.length > 40) throw new Error('Keep the name to 40 characters or fewer.');
-    if (latest.current.companies.some((c) => c.id !== exceptId && c.name.toLowerCase() === clean.toLowerCase())) throw new Error(`"${clean}" already exists.`);
+    if (!clean) throw new Error(L('Type a company name.', '请输入公司名称。'));
+    if (clean.length > 40) throw new Error(L('Keep the name to 40 characters or fewer.', '名称不能超过 40 个字符。'));
+    if (latest.current.companies.some((c) => c.id !== exceptId && c.name.toLowerCase() === clean.toLowerCase())) throw new Error(L(`"${clean}" already exists.`, `“${clean}”已存在。`));
     return clean;
   };
 
@@ -111,7 +112,7 @@ export function CompaniesProvider({ children }) {
   // Remove a company with its receipts, reports and photos on this phone (Drive copies are kept).
   const deleteCompany = useCallback(async (id) => {
     const { companies: list, activeId: act } = latest.current;
-    if (list.length <= 1) throw new Error('You need at least one company.');
+    if (list.length <= 1) throw new Error(L('You need at least one company.', '至少需要保留一家公司。'));
     const c = list.find((x) => x.id === id);
     if (!c) return;
     const data = await readJSON(c.dataKey);
@@ -129,7 +130,7 @@ export function CompaniesProvider({ children }) {
   // Put a receipt into another company's saved data (used by "Move to company").
   const sendReceiptTo = useCallback(async (companyId, receipt) => {
     const c = latest.current.companies.find((x) => x.id === companyId);
-    if (!c) throw new Error('Company not found.');
+    if (!c) throw new Error(L('Company not found.', '找不到该公司。'));
     const data = (await readJSON(c.dataKey)) || { receipts: [], reports: [], settings: { company: c.name } };
     data.receipts = [{ ...receipt, driveDirty: true, _rev: (receipt._rev || 0) + 1 }, ...(data.receipts || []).filter((r) => r.id !== receipt.id)];
     await AsyncStorage.setItem(c.dataKey, JSON.stringify(data));

@@ -11,6 +11,7 @@ import ReceiptResultHost from './src/ReceiptResult';
 import CameraModal from './src/CameraModal';
 import { openCamera } from './src/capture';
 import { CompaniesProvider, useCompanies } from './src/companies';
+import { L, LanguageGate } from './src/i18n';
 
 import HomeScreen from './src/screens/HomeScreen';
 import ReceiptsScreen from './src/screens/ReceiptsScreen';
@@ -25,11 +26,11 @@ import SettingsScreen from './src/screens/SettingsScreen';
 import InsightsScreen from './src/screens/InsightsScreen';
 
 const TABS = [
-  { key: 'home', label: 'Expenses', icon: 'wallet', comp: HomeScreen },
-  { key: 'insights', label: 'Insights', icon: 'chart-pie', comp: InsightsScreen },
-  { key: 'scan', label: 'Scan', icon: 'camera', center: true }, // opens the receipt camera, not a page
-  { key: 'receipts', label: 'Receipts', icon: 'receipt', comp: ReceiptsScreen },
-  { key: 'more', label: 'More', icon: 'menu', comp: MoreScreen },
+  { key: 'home', label: () => L('Expenses', '开支'), icon: 'wallet', comp: HomeScreen },
+  { key: 'insights', label: () => L('Insights', '分析'), icon: 'chart-pie', comp: InsightsScreen },
+  { key: 'scan', label: () => L('Scan', '扫描'), icon: 'camera', center: true }, // opens the receipt camera, not a page
+  { key: 'receipts', label: () => L('Receipts', '收据'), icon: 'receipt', comp: ReceiptsScreen },
+  { key: 'more', label: () => L('More', '更多'), icon: 'menu', comp: MoreScreen },
 ];
 
 const STACK = {
@@ -92,7 +93,7 @@ function Shell({ tab, setTab }) {
             return (
               <Pressable key={t.key} onPress={() => nav.tab(t.key)} style={styles.tab}>
                 <Icon name={t.icon} size={22} color={active ? colors.accentInk : colors.muted} />
-                <Text style={[styles.tabLabel, active && { color: colors.accentInk }]}>{t.label}</Text>
+                <Text style={[styles.tabLabel, active && { color: colors.accentInk }]}>{t.label()}</Text>
               </Pressable>
             );
           })}
@@ -125,12 +126,14 @@ function Gate() {
 export default function App() {
   return (
     <SafeAreaProvider>
-      <CompaniesProvider>
-        <StatusBar style="dark" />
-        <Gate />
-        <ToastHost />
-        <DialogHost />
-      </CompaniesProvider>
+      <StatusBar style="dark" />
+      <LanguageGate>
+        <CompaniesProvider>
+          <Gate />
+          <ToastHost />
+          <DialogHost />
+        </CompaniesProvider>
+      </LanguageGate>
     </SafeAreaProvider>
   );
 }

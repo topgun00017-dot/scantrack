@@ -10,6 +10,7 @@ import { colors } from '../theme';
 import { PeriodPicker, currentPeriod, inPeriod, periodLabel as labelFor, periodRange } from '../period';
 import { categoryMeta } from '../categories';
 import { byCategory, byMonth, filterReceipts, findIssues, money, sum } from '../utils';
+import { L } from '../i18n';
 
 export default function HomeScreen({ nav }) {
   const { receipts, settings } = useStore();
@@ -28,28 +29,28 @@ export default function HomeScreen({ nav }) {
 
   return (
     <ScrollView contentContainerStyle={{ paddingBottom: 32 }}>
-      <Header title={settings.name ? `Hi, ${settings.name.split(' ')[0]}` : 'Expenses'} subtitle="Track spending, stay tax-ready" />
+      <Header title={settings.name ? L(`Hi, ${settings.name.split(' ')[0]}`, `你好，${settings.name.split(' ')[0]}`) : L('Expenses', '开支')} subtitle={L('Track spending, stay tax-ready', '记录开支，随时准备报税')} />
       <View style={{ paddingHorizontal: 16 }}>
         <CompanySwitcher onManage={() => nav.push('settings')} style={{ marginBottom: 8 }} />
         <PeriodPicker period={period} onChange={setPeriod} />
 
         <Card style={{ marginTop: 12 }}>
-          <Text style={s.sub}>Total spent · {periodLabel}</Text>
+          <Text style={s.sub}>{L('Total spent', '总开支')} · {periodLabel}</Text>
           <Text style={{ color: colors.text, fontSize: 34, fontWeight: '800', marginTop: 2 }}>{money(total, cur)}</Text>
           <View style={{ flexDirection: 'row', gap: 10, marginTop: 14 }}>
-            <Stat label="Tax paid" value={money(sum(list, 'tax'), cur)} />
-            <Stat label="Receipts" value={String(list.length)} />
+            <Stat label={L('Tax paid', '已付税款')} value={money(sum(list, 'tax'), cur)} />
+            <Stat label={L('Receipts', '收据')} value={String(list.length)} />
           </View>
         </Card>
 
         {issues.length > 0 && (
           <Card style={{ marginTop: 12, borderColor: colors.warning }} onPress={() => nav.push('accounting')}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}><Icon name="alert" size={18} color={colors.warning} /><Text style={[s.body, { fontWeight: '700' }]}>{issues.length} item{issues.length > 1 ? 's' : ''} to tidy before tax time</Text></View>
-            <Text style={[s.sub, { marginTop: 4 }]}>Duplicates, uncategorised or unreviewed receipts. Tap to fix.</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}><Icon name="alert" size={18} color={colors.warning} /><Text style={[s.body, { fontWeight: '700' }]}>{L(`${issues.length} item${issues.length > 1 ? 's' : ''} to tidy before tax time`, `报税前有 ${issues.length} 项需要整理`)}</Text></View>
+            <Text style={[s.sub, { marginTop: 4 }]}>{L('Duplicates, uncategorised or unreviewed receipts. Tap to fix.', '重复、未分类或未审核的收据。点击处理。')}</Text>
           </Card>
         )}
 
-        <SectionTitle>Last 12 months</SectionTitle>
+        <SectionTitle>{L('Last 12 months', '最近 12 个月')}</SectionTitle>
         <Card>
           <View style={{ flexDirection: 'row', alignItems: 'flex-end', height: 120, gap: 4 }}>
             {months.map((m, i) => (
@@ -68,9 +69,9 @@ export default function HomeScreen({ nav }) {
           </View>
         </Card>
 
-        <SectionTitle right={<Text style={{ color: colors.accentInk, fontWeight: '700' }} onPress={() => nav.tab('receipts')}>See all</Text>}>Recent</SectionTitle>
+        <SectionTitle right={<Text style={{ color: colors.accentInk, fontWeight: '700' }} onPress={() => nav.tab('receipts')}>{L('See all', '查看全部')}</Text>}>{L('Recent', '最近')}</SectionTitle>
         {list.slice(0, 5).map((r) => <ReceiptRow key={r.id} r={r} onPress={() => nav.push('receipt', { id: r.id, ids: list.map((x) => x.id) })} />)}
-        {list.length === 0 && <Button title="Scan your first receipt" icon="camera" onPress={openCamera} />}
+        {list.length === 0 && <Button title={L('Scan your first receipt', '扫描你的第一张收据')} icon="camera" onPress={openCamera} />}
       </View>
 
     </ScrollView>

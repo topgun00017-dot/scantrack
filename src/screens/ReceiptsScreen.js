@@ -9,14 +9,15 @@ import { Button, Chip, ChipRow, Empty, Header, ReceiptRow, s } from '../componen
 import { colors } from '../theme';
 import { CATEGORIES } from '../categories';
 import { allTags, filterReceipts, money, sum } from '../utils';
+import { L, catLabel } from '../i18n';
 
 const byName = (a, b) => (a.merchant || '').localeCompare(b.merchant || '', undefined, { sensitivity: 'base' }) || (a.date < b.date ? 1 : -1);
 const SORTS = [
-  { key: 'az', label: 'Shop name A–Z', short: 'A–Z', fn: byName },
-  { key: 'za', label: 'Shop name Z–A', short: 'Z–A', fn: (a, b) => byName(b, a) },
-  { key: 'newest', label: 'Newest first', short: 'Newest', fn: (a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : (b.createdAt || 0) - (a.createdAt || 0)) },
-  { key: 'oldest', label: 'Oldest first', short: 'Oldest', fn: (a, b) => (a.date > b.date ? 1 : a.date < b.date ? -1 : (a.createdAt || 0) - (b.createdAt || 0)) },
-  { key: 'amount', label: 'Highest amount', short: 'Amount', fn: (a, b) => (Number(b.total) || 0) - (Number(a.total) || 0) },
+  { key: 'az', label: () => L('Shop name A–Z', '商家名称 A–Z'), short: () => 'A–Z', fn: byName },
+  { key: 'za', label: () => L('Shop name Z–A', '商家名称 Z–A'), short: () => 'Z–A', fn: (a, b) => byName(b, a) },
+  { key: 'newest', label: () => L('Newest first', '最新优先'), short: () => L('Newest', '最新'), fn: (a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : (b.createdAt || 0) - (a.createdAt || 0)) },
+  { key: 'oldest', label: () => L('Oldest first', '最早优先'), short: () => L('Oldest', '最早'), fn: (a, b) => (a.date > b.date ? 1 : a.date < b.date ? -1 : (a.createdAt || 0) - (b.createdAt || 0)) },
+  { key: 'amount', label: () => L('Highest amount', '金额最高'), short: () => L('Amount', '金额'), fn: (a, b) => (Number(b.total) || 0) - (Number(a.total) || 0) },
 ];
 
 export default function ReceiptsScreen({ nav }) {
@@ -49,17 +50,17 @@ export default function ReceiptsScreen({ nav }) {
   };
 
   const bulkDelete = () =>
-    showAlert('Delete receipts', `Delete ${selected.length} receipt(s)? This can't be undone.`, [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: () => { selected.forEach(deleteReceipt); setSelected([]); } },
+    showAlert(L('Delete receipts', '删除收据'), L(`Delete ${selected.length} receipt(s)? This can't be undone.`, `删除 ${selected.length} 张收据？此操作无法撤销。`), [
+      { text: L('Cancel', '取消'), style: 'cancel' },
+      { text: L('Delete', '删除'), style: 'destructive', onPress: () => { selected.forEach(deleteReceipt); setSelected([]); } },
     ]);
 
   return (
     <View style={{ flex: 1 }}>
       <Header
-        title="Receipts"
-        subtitle={`${list.length} shown · ${money(sum(list), settings.currency)}`}
-        right={selecting ? <Text style={{ color: colors.accentInk, fontWeight: '700' }} onPress={() => setSelected([])}>Cancel</Text> : <Text style={{ color: colors.accentInk, fontWeight: '700' }} onPress={() => setSelected(list.map((r) => r.id))}>Select</Text>}
+        title={L('Receipts', '收据')}
+        subtitle={`${L(`${list.length} shown`, `显示 ${list.length} 张`)} · ${money(sum(list), settings.currency)}`}
+        right={selecting ? <Text style={{ color: colors.accentInk, fontWeight: '700' }} onPress={() => setSelected([])}>{L('Cancel', '取消')}</Text> : <Text style={{ color: colors.accentInk, fontWeight: '700' }} onPress={() => setSelected(list.map((r) => r.id))}>{L('Select', '选择')}</Text>}
       />
       <View style={{ paddingHorizontal: 16 }}>
         <CompanySwitcher onManage={() => nav.push('settings')} style={{ marginBottom: 10 }} />
@@ -67,7 +68,7 @@ export default function ReceiptsScreen({ nav }) {
           <TextInput
           value={query}
           onChangeText={setQuery}
-          placeholder="Search merchant, item, tag, amount…"
+          placeholder={L('Search merchant, item, tag, amount…', '搜索商家、项目、标签、金额…')}
           placeholderTextColor={colors.faint}
           style={[s.input, { paddingLeft: 42 }]}
         />
@@ -83,8 +84,8 @@ export default function ReceiptsScreen({ nav }) {
               style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.surface, borderRadius: 12, borderWidth: 1, borderColor: category || onlyReview ? colors.accent : colors.border, paddingVertical: 12, paddingHorizontal: 14, flex: 1, opacity: pressed ? 0.7 : 1 })}
             >
               <Icon name={m ? m.icon : onlyReview ? 'alert' : 'shapes'} size={18} color={m ? m.color : onlyReview ? colors.warning : colors.accentInk} />
-              <Text style={[s.sub, { fontSize: 13 }]}>Category</Text>
-              <Text style={[s.body, { flex: 1, fontWeight: '700' }]} numberOfLines={1}>{m ? m.key : onlyReview ? 'Needs review' : 'All'}</Text>
+              <Text style={[s.sub, { fontSize: 13 }]}>{L('Category', '类别')}</Text>
+              <Text style={[s.body, { flex: 1, fontWeight: '700' }]} numberOfLines={1}>{m ? catLabel(m.key) : onlyReview ? L('Needs review', '需要审核') : L('All', '全部')}</Text>
               <Icon name="chevron-down" size={18} color={colors.muted} />
             </Pressable>
           );
@@ -93,21 +94,21 @@ export default function ReceiptsScreen({ nav }) {
             onPress={() => setSortOpen(true)}
             style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: colors.surface, borderRadius: 12, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 12, opacity: pressed ? 0.7 : 1 })}
           >
-            <Text style={[s.body, { fontWeight: '700' }]}>{sortBy.short}</Text>
+            <Text style={[s.body, { fontWeight: '700' }]}>{sortBy.short()}</Text>
             <Icon name="chevron-down" size={16} color={colors.muted} />
           </Pressable>
         </View>
         <Modal visible={sortOpen} transparent animationType="fade" onRequestClose={() => setSortOpen(false)}>
           <Pressable style={{ flex: 1, backgroundColor: '#0008', justifyContent: 'center', padding: 24 }} onPress={() => setSortOpen(false)}>
             <Pressable style={{ backgroundColor: colors.surface, borderRadius: 18, paddingVertical: 8 }} onPress={() => {}}>
-              <Text style={[s.h2, { paddingHorizontal: 16, paddingVertical: 10 }]}>Sort receipts</Text>
+              <Text style={[s.h2, { paddingHorizontal: 16, paddingVertical: 10 }]}>{L('Sort receipts', '收据排序')}</Text>
               {SORTS.map((o) => (
                 <Pressable
                   key={o.key}
                   onPress={() => { setSettings({ receiptSort: o.key }); setSortOpen(false); }}
                   style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', paddingVertical: 13, paddingHorizontal: 16, backgroundColor: sortBy.key === o.key ? colors.surface2 : pressed ? colors.bg : 'transparent' })}
                 >
-                  <Text style={[s.body, { flex: 1, fontWeight: sortBy.key === o.key ? '700' : '400' }]}>{o.label}</Text>
+                  <Text style={[s.body, { flex: 1, fontWeight: sortBy.key === o.key ? '700' : '400' }]}>{o.label()}</Text>
                   {sortBy.key === o.key && <Icon name="check" size={18} color={colors.accentInk} />}
                 </Pressable>
               ))}
@@ -117,12 +118,12 @@ export default function ReceiptsScreen({ nav }) {
         <Modal visible={catOpen} transparent animationType="fade" onRequestClose={() => setCatOpen(false)}>
           <Pressable style={{ flex: 1, backgroundColor: '#0008', justifyContent: 'center', padding: 24 }} onPress={() => setCatOpen(false)}>
             <Pressable style={{ backgroundColor: colors.surface, borderRadius: 18, paddingVertical: 8, maxHeight: '80%' }} onPress={() => {}}>
-              <Text style={[s.h2, { paddingHorizontal: 16, paddingVertical: 10 }]}>Show receipts</Text>
+              <Text style={[s.h2, { paddingHorizontal: 16, paddingVertical: 10 }]}>{L('Show receipts', '显示收据')}</Text>
               <ScrollView>
                 {[
-                  { key: 'all', label: 'All', icon: 'shapes', color: colors.accentInk, on: !category && !onlyReview, count: receipts.length, pick: () => { setCategory(null); setOnlyReview(false); } },
-                  { key: 'review', label: 'Needs review', icon: 'alert', color: colors.warning, on: onlyReview, count: receipts.filter((r) => r.status === 'needs_review').length, pick: () => { setCategory(null); setOnlyReview(true); } },
-                  ...[...CATEGORIES].sort((a, b) => (a.key === 'Others') - (b.key === 'Others') || a.key.localeCompare(b.key)).map((c) => ({ key: c.key, label: c.key, icon: c.icon, color: c.color, on: category === c.key, count: receipts.filter((r) => r.category === c.key).length, pick: () => { setCategory(c.key); setOnlyReview(false); } })),
+                  { key: 'all', label: L('All', '全部'), icon: 'shapes', color: colors.accentInk, on: !category && !onlyReview, count: receipts.length, pick: () => { setCategory(null); setOnlyReview(false); } },
+                  { key: 'review', label: L('Needs review', '需要审核'), icon: 'alert', color: colors.warning, on: onlyReview, count: receipts.filter((r) => r.status === 'needs_review').length, pick: () => { setCategory(null); setOnlyReview(true); } },
+                  ...[...CATEGORIES].sort((a, b) => (a.key === 'Others') - (b.key === 'Others') || a.key.localeCompare(b.key)).map((c) => ({ key: c.key, label: catLabel(c.key), icon: c.icon, color: c.color, on: category === c.key, count: receipts.filter((r) => r.category === c.key).length, pick: () => { setCategory(c.key); setOnlyReview(false); } })),
                 ].map((o) => (
                   <Pressable
                     key={o.key}
@@ -150,7 +151,7 @@ export default function ReceiptsScreen({ nav }) {
         data={list}
         keyExtractor={(r) => r.id}
         contentContainerStyle={{ padding: 16, paddingBottom: selecting ? 120 : 24 }}
-        ListEmptyComponent={<Empty title="No receipts found" text="Try a different search or filter." />}
+        ListEmptyComponent={<Empty title={L('No receipts found', '找不到收据')} text={L('Try a different search or filter.', '试试其他搜索词或筛选条件。')} />}
         renderItem={({ item }) => (
           <ReceiptRow
             r={item}
@@ -163,12 +164,12 @@ export default function ReceiptsScreen({ nav }) {
 
       {selecting && (
         <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, backgroundColor: colors.surface, borderTopWidth: 1, borderColor: colors.border, padding: 12 }}>
-          <Text style={[s.sub, { marginBottom: 8 }]}>{selected.length} selected · {money(sum(receipts.filter((r) => selected.includes(r.id))), settings.currency)}</Text>
+          <Text style={[s.sub, { marginBottom: 8 }]}>{L(`${selected.length} selected`, `已选 ${selected.length} 张`)} · {money(sum(receipts.filter((r) => selected.includes(r.id))), settings.currency)}</Text>
           <View style={{ flexDirection: 'row', gap: 8 }}>
-            <Button small title="Tag" icon="#" variant="secondary" style={{ flex: 1 }} onPress={() => setModal('tag')} />
-            <Button small title="Category" variant="secondary" style={{ flex: 1 }} onPress={() => setModal('category')} />
-            <Button small title="Export" variant="secondary" style={{ flex: 1 }} onPress={() => { const ids = selected; setSelected([]); nav.push('export', { ids }); }} />
-            <Button small title="Delete" variant="danger" style={{ flex: 1 }} onPress={bulkDelete} />
+            <Button small title={L('Tag', '标签')} icon="#" variant="secondary" style={{ flex: 1 }} onPress={() => setModal('tag')} />
+            <Button small title={L('Category', '类别')} variant="secondary" style={{ flex: 1 }} onPress={() => setModal('category')} />
+            <Button small title={L('Export', '导出')} variant="secondary" style={{ flex: 1 }} onPress={() => { const ids = selected; setSelected([]); nav.push('export', { ids }); }} />
+            <Button small title={L('Delete', '删除')} variant="danger" style={{ flex: 1 }} onPress={bulkDelete} />
           </View>
         </View>
       )}
@@ -178,18 +179,18 @@ export default function ReceiptsScreen({ nav }) {
         <View style={{ backgroundColor: colors.surface, padding: 20, borderTopLeftRadius: 20, borderTopRightRadius: 20 }}>
           {modal === 'tag' && (
             <>
-              <Text style={[s.h2, { marginBottom: 12 }]}>Add tag to {selected.length} receipt(s)</Text>
-              <TextInput autoFocus value={tagInput} onChangeText={setTagInput} placeholder="e.g. client-abc, penang-trip" placeholderTextColor={colors.faint} style={s.input} onSubmitEditing={applyTag} autoCapitalize="none" />
+              <Text style={[s.h2, { marginBottom: 12 }]}>{L(`Add tag to ${selected.length} receipt(s)`, `为 ${selected.length} 张收据添加标签`)}</Text>
+              <TextInput autoFocus value={tagInput} onChangeText={setTagInput} placeholder={L('e.g. client-abc, penang-trip', '例如：client-abc、penang-trip')} placeholderTextColor={colors.faint} style={s.input} onSubmitEditing={applyTag} autoCapitalize="none" />
               {tags.length > 0 && <ChipRow>{tags.map((t) => <Chip key={t} label={`#${t}`} onPress={() => setTagInput(t)} />)}</ChipRow>}
-              <Button title="Apply tag" onPress={applyTag} style={{ marginTop: 12 }} />
+              <Button title={L('Apply tag', '添加标签')} onPress={applyTag} style={{ marginTop: 12 }} />
             </>
           )}
           {modal === 'category' && (
             <>
-              <Text style={[s.h2, { marginBottom: 12 }]}>Set category</Text>
+              <Text style={[s.h2, { marginBottom: 12 }]}>{L('Set category', '设置类别')}</Text>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
                 {CATEGORIES.map((c) => (
-                  <Chip key={c.key} icon={c.icon} iconColor={c.color} label={c.key} onPress={() => { updateMany(selected, () => ({ category: c.key })); setModal(null); setSelected([]); }} />
+                  <Chip key={c.key} icon={c.icon} iconColor={c.color} label={catLabel(c.key)} onPress={() => { updateMany(selected, () => ({ category: c.key })); setModal(null); setSelected([]); }} />
                 ))}
               </View>
             </>

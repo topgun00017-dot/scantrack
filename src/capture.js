@@ -6,6 +6,7 @@ import { useStore } from './store';
 import { extractReceipt } from './ai';
 import { dataUrlParts, showAlert } from './platform';
 import { findDuplicate, today } from './utils';
+import { L } from './i18n';
 
 export const emptyDraft = (extra = {}) => ({ date: today(), total: 0, tax: 0, lineItems: [], category: 'Others', ...extra });
 
@@ -35,12 +36,12 @@ export function useCapture(nav) {
 
   // One photo → review form.
   const processPhoto = async (asset) => {
-    setBusy({ uri: asset.uri, label: aiReady ? 'Reading your receipt…' : 'Saving photo…' });
+    setBusy({ uri: asset.uri, label: aiReady ? L('Reading your receipt…', '正在读取收据…') : L('Saving photo…', '正在保存照片…') });
     try {
       const draft = await toDraft(asset);
       nav.push('receipt', { draft });
     } catch (e) {
-      showAlert('Could not read receipt', `${e.message}\n\nYou can enter the details yourself.`);
+      showAlert(L('Could not read receipt', '无法读取收据'), `${e.message}\n\n${L('You can enter the details yourself.', '你可以自己填写详情。')}`);
       nav.push('receipt', { draft: emptyDraft({ imageUri: await persistImage(asset.uri), status: 'needs_review', lowConfidence: ['merchant', 'date', 'total'] }) });
     } finally {
       setBusy(null);
@@ -58,24 +59,27 @@ export function useCapture(nav) {
     const known = [...receipts];
     for (let i = 0; i < res.assets.length; i++) {
       const asset = res.assets[i];
-      setBusy({ uri: asset.uri, label: `Processing ${i + 1} of ${res.assets.length}…` });
+      setBusy({ uri: asset.uri, label: L(`Processing ${i + 1} of ${res.assets.length}…`, `正在处理第 ${i + 1} 张，共 ${res.assets.length} 张…`) });
       try {
         const d = await toDraft(asset);
-        const rec = { ...d, merchant: d.merchant || 'Unknown merchant' };
+        const rec = { ...d, merchant: d.merchant || L('Unknown merchant', '未知商家') };
         delete rec.lowConfidence;
         if (findDuplicate(known, rec)) dups++;
         known.push(addReceipt(rec));
         d.status === 'needs_review' ? review++ : ok++;
       } catch {
         review++;
-        addReceipt({ imageUri: await persistImage(asset.uri), merchant: 'Unreadable receipt', date: today(), total: 0, tax: 0, category: 'Others', status: 'needs_review' });
+        addReceipt({ imageUri: await persistImage(asset.uri), merchant: L('Unreadable receipt', '无法读取的收据'), date: today(), total: 0, tax: 0, category: 'Others', status: 'needs_review' });
       }
     }
     setBusy(null);
     showAlert(
-      'Batch done',
-      `${ok} processed${review ? `, ${review} need review` : ''}.` + (dups ? `\n\n${dups} look like receipts you already have. Check them under More → Prepare for accounting.` : ''),
-      [{ text: 'View receipts', onPress: () => nav.tab('receipts') }]
+      L('Batch done', '批量处理完成'),
+      L(
+        `${ok} processed${review ? `, ${review} need review` : ''}.` + (dups ? `\n\n${dups} look like receipts you already have. Check them under More → Prepare for accounting.` : ''),
+        `已处理 ${ok} 张${review ? `，${review} 张需要审核` : ''}。` + (dups ? `\n\n有 ${dups} 张看起来与已有收据重复。请到 更多 → 准备会计资料 中检查。` : '')
+      ),
+      [{ text: L('View receipts', '查看收据'), onPress: () => nav.tab('receipts') }]
     );
   };
 

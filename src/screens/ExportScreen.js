@@ -13,16 +13,18 @@ import { Button, Card, Chip, Header, s } from '../components';
 import { colors, radius } from '../theme';
 import { CATEGORIES } from '../categories';
 import { filterReceipts, money, prettyDate, rangeFor, sum, toISO } from '../utils';
+import { L, catLabel } from '../i18n';
 
-const PRESETS = [
-  { key: 'today', label: 'Today' },
-  { key: 'last_7', label: 'Last 7 Days' },
-  { key: 'last_30', label: 'Last 30 Days' },
-  { key: 'this_month', label: 'This Month' },
-  { key: 'last_month', label: 'Last Month' },
-  { key: 'this_year', label: 'This Year' },
-  { key: 'all', label: 'All Time' },
-  { key: 'custom', label: 'Custom' },
+// Text is built while rendering so it follows the app language.
+const PRESETS = () => [
+  { key: 'today', label: L('Today', '今天') },
+  { key: 'last_7', label: L('Last 7 Days', '最近 7 天') },
+  { key: 'last_30', label: L('Last 30 Days', '最近 30 天') },
+  { key: 'this_month', label: L('This Month', '本月') },
+  { key: 'last_month', label: L('Last Month', '上个月') },
+  { key: 'this_year', label: L('This Year', '今年') },
+  { key: 'all', label: L('All Time', '全部时间') },
+  { key: 'custom', label: L('Custom', '自定义') },
 ];
 
 const FORMATS = [
@@ -30,21 +32,24 @@ const FORMATS = [
   { key: 'xlsx', icon: 'file-spreadsheet', label: 'Excel' },
   { key: 'csv', icon: 'sheet', label: 'CSV' },
   { key: 'zip', icon: 'file-archive', label: 'ZIP' },
-  { key: 'gsheet', icon: 'sheet', label: 'Sheets' },
+  { key: 'gsheet', icon: 'sheet', label: 'Sheets' }, // product names, not translated
 ];
 
-const LAYOUTS = [
-  { key: 'summary', label: 'Summary', text: 'Overview with totals' },
-  { key: 'detailed', label: 'Detailed', text: 'With line items & photos' },
-  { key: 'statement', label: 'Statement', text: 'Bank style, running total' },
+const LAYOUTS = () => [
+  { key: 'summary', label: L('Summary', '汇总'), text: L('Overview with totals', '含总额的概览') },
+  { key: 'detailed', label: L('Detailed', '详细'), text: L('With line items & photos', '含明细项目和照片') },
+  { key: 'statement', label: L('Statement', '明细表'), text: L('Bank style, running total', '银行对账单样式，含累计') },
 ];
 
-const FORMAT_NOTE = {
-  xlsx: 'Workbook with receipts, a category summary and line items.',
-  csv: 'One row per receipt. Opens in any spreadsheet or accounting software.',
-  zip: 'CSV + Excel + every original receipt photo in one file.',
-  gsheet: 'Saves a copy as a Google Sheet in your Google Drive (ScanTrack Receipts › this company), ready to share online. The Receipt photo column shows each whole receipt, and Image link opens it.',
-};
+const FORMAT_NOTE = () => ({
+  xlsx: L('Workbook with receipts, a category summary and line items.', '包含收据、类别汇总和明细项目的工作簿。'),
+  csv: L('One row per receipt. Opens in any spreadsheet or accounting software.', '每张收据一行。可用任何电子表格或会计软件打开。'),
+  zip: L('CSV + Excel + every original receipt photo in one file.', 'CSV + Excel + 所有原始收据照片，打包成一个文件。'),
+  gsheet: L(
+    'Saves a copy as a Google Sheet in your Google Drive (ScanTrack Receipts › this company), ready to share online. The Receipt photo column shows each whole receipt, and Image link opens it.',
+    '在你的 Google 云端硬盘（ScanTrack Receipts › 此公司）中另存为 Google 表格，方便在线分享。“收据照片”一栏会显示每张完整的收据。'
+  ),
+});
 
 const isoToDate = (iso) => {
   const [y, m, d] = iso.split('-').map(Number);
@@ -77,7 +82,7 @@ function TypedDate({ label, value, onChange, style }) {
   React.useEffect(() => setText(value), [value]);
   return (
     <View style={style}>
-      <Text style={s.sub}>{label} (YYYY-MM-DD)</Text>
+      <Text style={s.sub}>{label} ({L('YYYY-MM-DD', '年-月-日')})</Text>
       <TextInput
         value={text}
         onChangeText={(v) => {
@@ -138,24 +143,24 @@ export default function ExportScreen({ nav, params }) {
     try {
       const base = preselected ? 'receipts_selected' : `receipts_${range.from}_${range.to}${category ? '_' + category.replace(/\W+/g, '-') : ''}`;
       const subtitle = preselected
-        ? `${list.length} selected receipts`
-        : `${prettyDate(range.from)} – ${prettyDate(range.to)} · ${category || 'All categories'} · ${list.length} receipts`;
+        ? L(`${list.length} selected receipts`, `已选 ${list.length} 张收据`)
+        : `${prettyDate(range.from)} – ${prettyDate(range.to)} · ${category ? catLabel(category) : L('All categories', '所有类别')} · ${L(`${list.length} receipts`, `${list.length} 张收据`)}`;
       if (format === 'gsheet') {
         if (!settings.driveEnabled) {
-          showAlert('Sign in to Google Drive first', 'Go to Settings › Google Drive backup and sign in, then try again.');
+          showAlert(L('Sign in to Google Drive first', '请先登录 Google 云端硬盘'), L('Go to Settings › Google Drive backup and sign in, then try again.', '请到 设置 › Google 云端硬盘备份 登录后再试。'));
           return;
         }
         const url = await Drive.saveAsGoogleSheet(`ScanTrack ${base.replace(/^receipts_?/, '').replace(/_/g, ' ') || 'receipts'}`.trim(), buildWorkbookBase64(list, true), list.length);
-        showAlert('Saved to Google Sheets', 'A copy is in your Google Drive under ScanTrack Receipts. Open it and tap Share to give your users access.', [
-          { text: 'Share link', onPress: () => Share.share({ message: url }) },
-          { text: 'Open', onPress: () => Linking.openURL(url) },
+        showAlert(L('Saved to Google Sheets', '已保存到 Google 表格'), L('A copy is in your Google Drive under ScanTrack Receipts. Open it and tap Share to give your users access.', '副本已保存在 Google 云端硬盘的 ScanTrack Receipts 文件夹中。打开后点击“共享”即可让其他人访问。'), [
+          { text: L('Share link', '分享链接'), onPress: () => Share.share({ message: url }) },
+          { text: L('Open', '打开'), onPress: () => Linking.openURL(url) },
         ]);
         return;
       }
       const out = await exportReceipts(format, list, settings, base, { layout, subtitle });
-      await deliver(out, 'Export receipts');
+      await deliver(out, L('Export receipts', '导出收据'));
     } catch (e) {
-      showAlert('Export failed', e.message);
+      showAlert(L('Export failed', '导出失败'), e.message);
     } finally {
       setBusy(false);
     }
@@ -163,39 +168,39 @@ export default function ExportScreen({ nav, params }) {
 
   return (
     <View style={{ flex: 1 }}>
-      <Header title="Export receipts" onBack={nav.back} />
+      <Header title={L('Export receipts', '导出收据')} onBack={nav.back} />
       <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 140 + bottomInset }}>
         {preselected ? (
           <Card>
-            <Text style={s.body}>Exporting {preselected.length} selected receipt(s)</Text>
+            <Text style={s.body}>{L(`Exporting ${preselected.length} selected receipt(s)`, `正在导出已选的 ${preselected.length} 张收据`)}</Text>
           </Card>
         ) : (
           <>
             {/* Category drop-down */}
-            <Label>Category</Label>
+            <Label>{L('Category', '类别')}</Label>
             <Pressable
               onPress={() => setCatOpen(true)}
               style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.surface, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, paddingVertical: 14, paddingHorizontal: 14, opacity: pressed ? 0.7 : 1 })}
             >
               <Icon name={catMeta ? catMeta.icon : 'shapes'} size={20} color={catMeta ? catMeta.color : colors.accentInk} />
-              <Text style={[s.body, { flex: 1, fontWeight: '700' }]} numberOfLines={1}>{catMeta ? catMeta.key : 'All categories'}</Text>
+              <Text style={[s.body, { flex: 1, fontWeight: '700' }]} numberOfLines={1}>{catMeta ? catLabel(catMeta.key) : L('All categories', '所有类别')}</Text>
               <Icon name="chevron-down" size={20} color={colors.muted} />
             </Pressable>
 
-            <Label>Date range</Label>
+            <Label>{L('Date range', '日期范围')}</Label>
             <View style={{ flexDirection: 'row', gap: 10 }}>
-              <DateBox label="From" value={range.from} onChange={setDate('from')} />
-              <DateBox label="To" value={range.to} onChange={setDate('to')} />
+              <DateBox label={L('From', '从')} value={range.from} onChange={setDate('from')} />
+              <DateBox label={L('To', '至')} value={range.to} onChange={setDate('to')} />
             </View>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12 }}>
-              {PRESETS.map((p) => (
+              {PRESETS().map((p) => (
                 <Chip key={p.key} label={p.label} active={preset === p.key} onPress={() => choosePreset(p.key)} />
               ))}
             </View>
           </>
         )}
 
-        <Label>Format</Label>
+        <Label>{L('Format', '格式')}</Label>
         <View style={{ flexDirection: 'row', gap: 8 }}>
           {FORMATS.map((f) => {
             const on = format === f.key;
@@ -214,9 +219,9 @@ export default function ExportScreen({ nav, params }) {
 
         {format === 'pdf' ? (
           <>
-            <Label>PDF layout</Label>
+            <Label>{L('PDF layout', 'PDF 版式')}</Label>
             <View style={{ flexDirection: 'row', gap: 8 }}>
-              {LAYOUTS.map((l) => {
+              {LAYOUTS().map((l) => {
                 const on = layout === l.key;
                 return (
                   <Pressable
@@ -232,14 +237,14 @@ export default function ExportScreen({ nav, params }) {
             </View>
           </>
         ) : (
-          <Text style={[s.sub, { marginTop: 10 }]}>{FORMAT_NOTE[format]}</Text>
+          <Text style={[s.sub, { marginTop: 10 }]}>{FORMAT_NOTE()[format]}</Text>
         )}
       </ScrollView>
 
       <Modal visible={catOpen} transparent animationType="fade" onRequestClose={() => setCatOpen(false)}>
         <Pressable style={{ flex: 1, backgroundColor: '#0008', justifyContent: 'center', padding: 24 }} onPress={() => setCatOpen(false)}>
           <Pressable style={{ backgroundColor: colors.surface, borderRadius: radius.lg, paddingVertical: 8, maxHeight: '80%' }} onPress={() => {}}>
-            <Text style={[s.h2, { paddingHorizontal: 16, paddingVertical: 10 }]}>Choose category</Text>
+            <Text style={[s.h2, { paddingHorizontal: 16, paddingVertical: 10 }]}>{L('Choose category', '选择类别')}</Text>
             <ScrollView>
               {cats.map((key, i) => {
                 const m = CATEGORIES.find((c) => c.key === key);
@@ -254,7 +259,7 @@ export default function ExportScreen({ nav, params }) {
                     style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 13, paddingHorizontal: 16, backgroundColor: on ? colors.surface2 : pressed ? colors.bg : 'transparent' })}
                   >
                     <Icon name={m ? m.icon : 'shapes'} size={20} color={m ? m.color : colors.accentInk} />
-                    <Text style={[s.body, { flex: 1, fontWeight: on ? '700' : '400' }]}>{m ? m.key : 'All categories'}</Text>
+                    <Text style={[s.body, { flex: 1, fontWeight: on ? '700' : '400' }]}>{m ? catLabel(m.key) : L('All categories', '所有类别')}</Text>
                     {on && <Icon name="check" size={18} color={colors.accentInk} />}
                   </Pressable>
                 );
@@ -266,9 +271,9 @@ export default function ExportScreen({ nav, params }) {
 
       <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: 16, paddingBottom: 16 + bottomInset, backgroundColor: colors.surface, borderTopWidth: 1, borderColor: colors.border }}>
         <Text style={[s.sub, { marginBottom: 8, textAlign: 'center' }]}>
-          {list.length} receipt{list.length === 1 ? '' : 's'} · {money(sum(list), settings.currency)}
+          {L(`${list.length} receipt${list.length === 1 ? '' : 's'}`, `${list.length} 张收据`)} · {money(sum(list), settings.currency)}
         </Text>
-        <Button title={format === 'gsheet' ? 'Save to Google Sheets' : 'Export'} icon={format === 'gsheet' ? 'sheet' : 'download'} loading={busy} disabled={!list.length} onPress={go} />
+        <Button title={format === 'gsheet' ? L('Save to Google Sheets', '保存到 Google 表格') : L('Export', '导出')} icon={format === 'gsheet' ? 'sheet' : 'download'} loading={busy} disabled={!list.length} onPress={go} />
       </View>
     </View>
   );

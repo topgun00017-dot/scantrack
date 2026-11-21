@@ -3,6 +3,7 @@
 // (`sample` capability), files are offered with the `downloads` capability,
 // and confirmations use an in-app dialog because browser dialogs are blocked.
 import { Alert, Platform } from 'react-native';
+import { L } from './i18n';
 
 export const isWeb = Platform.OS === 'web';
 
@@ -24,7 +25,7 @@ export function setDialogListener(fn) {
 
 export function showAlert(title, message, buttons) {
   if (!isWeb) return Alert.alert(title, message, buttons);
-  const list = buttons && buttons.length ? buttons : [{ text: 'OK' }];
+  const list = buttons && buttons.length ? buttons : [{ text: L('OK', '好') }];
   if (dialogListener) dialogListener({ title, message, buttons: list });
 }
 
@@ -45,11 +46,11 @@ export function base64ToBlob(b64, mime) {
 // ---------- web download ----------
 export async function webSave(filename, data) {
   const downloads = await capability('downloads');
-  if (!downloads) throw new Error('Downloads are not available in this view.');
+  if (!downloads) throw new Error(L('Downloads are not available in this view.', '此视图无法下载文件。'));
   try {
     await downloads.save({ filename, data });
   } catch (e) {
     if (e?.code === 'declined') return;
-    throw new Error(e?.message || 'The file could not be saved.');
+    throw new Error(e?.message || L('The file could not be saved.', '无法保存文件。'));
   }
 }

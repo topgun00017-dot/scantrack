@@ -6,6 +6,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import { isWeb } from './platform';
 import { buildCSV } from './exporters';
 import { money } from './utils';
+import { L } from './i18n';
 
 const SCOPES = ['https://www.googleapis.com/auth/drive.file'];
 const API = 'https://www.googleapis.com/drive/v3/files';
@@ -40,16 +41,16 @@ function friendly(e) {
   const g = lib();
   const code = e?.code;
   if (g && code === g.statusCodes?.SIGN_IN_CANCELLED) return null;
-  if (g && code === g.statusCodes?.PLAY_SERVICES_NOT_AVAILABLE) return 'Google Play services is not available or needs an update on this phone.';
+  if (g && code === g.statusCodes?.PLAY_SERVICES_NOT_AVAILABLE) return L('Google Play services is not available or needs an update on this phone.', '此手机上的 Google Play 服务不可用或需要更新。');
   if (String(code) === '10' || /DEVELOPER_ERROR/i.test(e?.message || '')) {
-    return 'Google sign-in is not set up for this app yet. In Google Cloud Console, add an Android OAuth client for package com.scantrack.app with the SHA-1 shown in Settings, and enable the Google Drive API.';
+    return L('Google sign-in is not set up for this app yet. In Google Cloud Console, add an Android OAuth client for package com.scantrack.app with the SHA-1 shown in Settings, and enable the Google Drive API.', '此应用尚未设置 Google 登录。请在 Google Cloud Console 中为软件包 com.scantrack.app 添加 Android OAuth 客户端（使用设置中显示的 SHA-1），并启用 Google Drive API。');
   }
-  return e?.message || 'Google sign-in failed.';
+  return e?.message || L('Google sign-in failed.', 'Google 登录失败。');
 }
 
 export async function signIn() {
   const g = lib();
-  if (!g) throw new Error('Google Drive backup works in the installed app only.');
+  if (!g) throw new Error(L('Google Drive backup works in the installed app only.', 'Google 云端硬盘备份仅在已安装的应用中可用。'));
   try {
     await g.GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
     const res = await g.GoogleSignin.signIn();
@@ -84,15 +85,15 @@ export function setExpectedAccount(email) {
 
 async function token() {
   const g = lib();
-  if (!g) throw new Error('Google Drive is not available here.');
+  if (!g) throw new Error(L('Google Drive is not available here.', '此处无法使用 Google 云端硬盘。'));
   if (!g.GoogleSignin.getCurrentUser()) {
     const r = await g.GoogleSignin.signInSilently();
-    if (r?.type !== 'success') throw new Error('Signed out of Google. Tap Sign in with Google to reconnect.');
+    if (r?.type !== 'success') throw new Error(L('Signed out of Google. Tap Sign in with Google to reconnect.', '已退出 Google。请点击“使用 Google 登录”重新连接。'));
   }
   const current = g.GoogleSignin.getCurrentUser()?.user?.email;
   if (expectedEmail && current && current.toLowerCase() !== expectedEmail.toLowerCase()) {
     await g.GoogleSignin.signOut().catch(() => {});
-    throw new Error(`Google is signed in as a different account. Sign in again as ${expectedEmail}.`);
+    throw new Error(L(`Google is signed in as a different account. Sign in again as ${expectedEmail}.`, `Google 当前登录的是另一个帐号。请以 ${expectedEmail} 重新登录。`));
   }
   const { accessToken } = await g.GoogleSignin.getTokens();
   return accessToken;
@@ -104,7 +105,7 @@ async function api(tok, url, opts = {}) {
   const text = await res.text();
   const json = text ? JSON.parse(text) : null;
   if (!res.ok) {
-    const err = new Error(json?.error?.message || `Google Drive error ${res.status}`);
+    const err = new Error(json?.error?.message || L(`Google Drive error ${res.status}`, `Google 云端硬盘错误 ${res.status}`));
     err.status = res.status;
     throw err;
   }
@@ -205,7 +206,7 @@ async function formatPhotoSheet(tok, id, rowCount) {
     const range = (r0, r1, c0, c1) => ({ sheetId, startRowIndex: r0, endRowIndex: r1, startColumnIndex: c0, endColumnIndex: c1 });
     const dim = (dimension, startIndex, endIndex, properties, fields) => ({ updateDimensionProperties: { range: { sheetId, dimension, startIndex, endIndex }, properties, fields } });
     const preview =
-      '=IFERROR(IMAGE(INDEX(FILTER(O2:O, N2:N=TRUE), 1)), "Tick the Preview box next to a receipt to see it here")';
+      `=IFERROR(IMAGE(INDEX(FILTER(O2:O, N2:N=TRUE), 1)), "${L('Tick the Preview box next to a receipt to see it here', '勾选收据旁的“预览”框即可在此查看')}")`;
     const batch = (requests) =>
       api(tok, `https://sheets.googleapis.com/v4/spreadsheets/${id}:batchUpdate`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ requests }) });
     await batch([
@@ -223,7 +224,7 @@ async function formatPhotoSheet(tok, id, rowCount) {
         updateCells: {
           range: range(0, 2, 16, 17),
           rows: [
-            { values: [{ userEnteredValue: { stringValue: 'Receipt preview' }, userEnteredFormat: { textFormat: { bold: true } } }] },
+            { values: [{ userEnteredValue: { stringValue: L('Receipt preview', '收据预览') }, userEnteredFormat: { textFormat: { bold: true } } }] },
             { values: [{ userEnteredValue: { formulaValue: preview }, userEnteredFormat: { horizontalAlignment: 'CENTER', verticalAlignment: 'MIDDLE', wrapStrategy: 'WRAP', textFormat: { foregroundColor: { red: 0.45, green: 0.45, blue: 0.5 } } } }] },
           ],
           fields: 'userEnteredValue,userEnteredFormat(horizontalAlignment,verticalAlignment,wrapStrategy,textFormat)',

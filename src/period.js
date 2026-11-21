@@ -6,9 +6,11 @@ import { Modal, Pressable, Text, View } from 'react-native';
 import { Button, Chip, s } from './components';
 import { colors, radius } from './theme';
 import { toISO } from './utils';
+import { L, isZh, monthLong, monthShort } from './i18n';
 
-export const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-export const MONTHS_LONG = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+// Month names follow the app language; call these while rendering.
+const MONTH_INDEXES = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
+const MONTHS = { map: (fn) => MONTH_INDEXES.map((i) => fn(monthShort(i), i)) };
 
 // Older code stored a single `month`; treat it as a one-month list.
 const monthsOf = (p) => (p.months && p.months.length ? [...p.months].sort((a, b) => a - b) : [p.month ?? new Date().getMonth()]);
@@ -35,17 +37,25 @@ export function inPeriod(p, iso) {
 
 const consecutive = (ms) => ms.every((m, i) => i === 0 || m === ms[i - 1] + 1);
 
-function monthsText(p, names) {
+function monthsText(p, name) {
   const ms = monthsOf(p);
-  if (ms.length === 1) return `${names[ms[0]]} ${p.year}`;
+  if (isZh()) {
+    if (ms.length === 1) return `${p.year}年${name(ms[0])}`;
+    if (ms.length === 12) return `${p.year}年`;
+    if (consecutive(ms)) return `${p.year}年${name(ms[0])} – ${name(ms[ms.length - 1])}`;
+    if (ms.length <= 3) return `${p.year}年${ms.map((m) => monthShort(m)).join('、')}`;
+    return `${p.year}年的 ${ms.length} 个月`;
+  }
+  if (ms.length === 1) return `${name(ms[0])} ${p.year}`;
   if (ms.length === 12) return `${p.year}`;
-  if (consecutive(ms)) return `${names[ms[0]]} – ${names[ms[ms.length - 1]]} ${p.year}`;
-  if (ms.length <= 3) return `${ms.map((m) => MONTHS[m]).join(', ')} ${p.year}`;
+  if (consecutive(ms)) return `${name(ms[0])} – ${name(ms[ms.length - 1])} ${p.year}`;
+  if (ms.length <= 3) return `${ms.map((m) => monthShort(m)).join(', ')} ${p.year}`;
   return `${ms.length} months of ${p.year}`;
 }
 
-export const periodLabel = (p) => (p.mode === 'year' ? `${p.year}` : monthsText(p, MONTHS_LONG));
-const shortLabel = (p) => monthsText(p, MONTHS);
+const yearText = (y) => (isZh() ? `${y}年` : `${y}`);
+export const periodLabel = (p) => (p.mode === 'year' ? yearText(p.year) : monthsText(p, monthLong));
+const shortLabel = (p) => monthsText(p, monthShort);
 
 // "Nov – Dec 2026 ▾" (opens a Jan–Dec grid: tap months to pick one or more, then Apply) and "This year".
 export function PeriodPicker({ period, onChange }) {
@@ -73,8 +83,8 @@ export function PeriodPicker({ period, onChange }) {
   return (
     <>
       <View style={{ flexDirection: 'row', gap: 8, paddingVertical: 4 }}>
-        <Chip icon="calendar" label={`${period.mode === 'month' ? shortLabel(period) : `${MONTHS[now.getMonth()]} ${now.getFullYear()}`}  ▾`} active={period.mode === 'month'} onPress={openPicker} />
-        <Chip label="This year" active={period.mode === 'year'} onPress={() => onChange({ mode: 'year', year: now.getFullYear(), months: monthsOf(period) })} />
+        <Chip icon="calendar" label={`${period.mode === 'month' ? shortLabel(period) : shortLabel({ mode: 'month', year: now.getFullYear(), months: [now.getMonth()] })}  ▾`} active={period.mode === 'month'} onPress={openPicker} />
+        <Chip label={L('This year', '今年')} active={period.mode === 'year'} onPress={() => onChange({ mode: 'year', year: now.getFullYear(), months: monthsOf(period) })} />
       </View>
 
       <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
@@ -84,12 +94,12 @@ export function PeriodPicker({ period, onChange }) {
               <Pressable hitSlop={10} style={{ paddingHorizontal: 12 }} onPress={() => changeYear(-1)}>
                 <Icon name="chevron-left" size={26} color={colors.accentInk} />
               </Pressable>
-              <Text style={s.h2}>{year}</Text>
+              <Text style={s.h2}>{yearText(year)}</Text>
               <Pressable hitSlop={10} style={{ paddingHorizontal: 12 }} onPress={() => changeYear(1)}>
                 <Icon name="chevron-right" size={26} color={colors.accentInk} />
               </Pressable>
             </View>
-            <Text style={[s.sub, { textAlign: 'center', marginBottom: 12 }]}>Tap one or more months</Text>
+            <Text style={[s.sub, { textAlign: 'center', marginBottom: 12 }]}>{L('Tap one or more months', '点选一个或多个月份')}</Text>
 
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
               {MONTHS.map((m, i) => {
@@ -120,10 +130,10 @@ export function PeriodPicker({ period, onChange }) {
             </View>
 
             <View style={{ flexDirection: 'row', gap: 8, marginTop: 16 }}>
-              <Button small title="Clear" variant="secondary" style={{ flex: 1 }} disabled={!picked.length} onPress={() => setPicked([])} />
+              <Button small title={L('Clear', '清除')} variant="secondary" style={{ flex: 1 }} disabled={!picked.length} onPress={() => setPicked([])} />
               <Button
                 small
-                title={picked.length ? `Apply · ${picked.length} month${picked.length > 1 ? 's' : ''}` : 'Pick a month'}
+                title={picked.length ? L(`Apply · ${picked.length} month${picked.length > 1 ? 's' : ''}`, `应用 · ${picked.length} 个月`) : L('Pick a month', '选择月份')}
                 style={{ flex: 2 }}
                 disabled={!picked.length}
                 onPress={apply}

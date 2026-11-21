@@ -9,13 +9,14 @@ import { Card, Header, SectionTitle, Stat, s } from '../components';
 import { Icon } from '../icons';
 import { colors, radius } from '../theme';
 import { categoryMeta } from '../categories';
-import { MONTHS, PeriodPicker, currentPeriod, inPeriod, periodLabel, periodRange } from '../period';
+import { PeriodPicker, currentPeriod, inPeriod, periodLabel, periodRange } from '../period';
+import { L, catLabel, isZh, monthShort } from '../i18n';
 import { byCategory, filterReceipts, money, sum } from '../utils';
 
-const CHARTS = [
-  { key: 'doughnut', label: 'Donut chart', icon: 'circle' },
-  { key: 'bar', label: 'Bar graph', icon: 'chart-column' },
-  { key: 'line', label: 'Line chart', icon: 'chart-line' },
+const CHARTS = () => [
+  { key: 'doughnut', label: L('Donut chart', '环形图'), icon: 'circle' },
+  { key: 'bar', label: L('Bar graph', '条形图'), icon: 'chart-column' },
+  { key: 'line', label: L('Line chart', '折线图'), icon: 'chart-line' },
 ];
 
 // ---------- doughnut ----------
@@ -108,14 +109,14 @@ function buckets(period, list) {
   if (period.mode !== 'year' && months.length === 1) {
     const m = months[0];
     const days = new Date(period.year, m + 1, 0).getDate();
-    const out = Array.from({ length: days }, (_, i) => ({ label: String(i + 1), long: `${i + 1} ${MONTHS[m]}`, total: 0 }));
+    const out = Array.from({ length: days }, (_, i) => ({ label: String(i + 1), long: isZh() ? `${monthShort(m)}${i + 1}日` : `${i + 1} ${monthShort(m)}`, total: 0 }));
     list.forEach((r) => {
       const d = Number((r.date || '').slice(8, 10));
       if (d >= 1 && d <= days) out[d - 1].total += Number(r.total) || 0;
     });
     return { unit: 'day', points: out };
   }
-  const out = months.map((m) => ({ label: MONTHS[m], long: `${MONTHS[m]} ${period.year}`, m, total: 0 }));
+  const out = months.map((m) => ({ label: monthShort(m), long: isZh() ? `${period.year}年${monthShort(m)}` : `${monthShort(m)} ${period.year}`, m, total: 0 }));
   list.forEach((r) => {
     const m = Number((r.date || '').slice(5, 7)) - 1;
     const b = out.find((x) => x.m === m);
@@ -165,11 +166,11 @@ function LineChart({ period, list, selected, cur }) {
         </Svg>
       )}
       <Text style={[s.sub, { textAlign: 'center', marginTop: 4 }]}>
-        {selected ? `${selected} · ` : ''}
-        {all.unit === 'day' ? 'Spending per day' : 'Spending per month'}
-        {top && top.total > 0 ? ` · highest ${top.long}: ${money(top.total, cur)}` : ''}
+        {selected ? `${catLabel(selected)} · ` : ''}
+        {all.unit === 'day' ? L('Spending per day', '每日开支') : L('Spending per month', '每月开支')}
+        {top && top.total > 0 ? L(` · highest ${top.long}: ${money(top.total, cur)}`, ` · 最高 ${top.long}：${money(top.total, cur)}`) : ''}
       </Text>
-      {selected && <Text style={[s.sub, { textAlign: 'center', fontSize: 11 }]}>Dotted line: all categories</Text>}
+      {selected && <Text style={[s.sub, { textAlign: 'center', fontSize: 11 }]}>{L('Dotted line: all categories', '虚线：所有类别')}</Text>}
     </View>
   );
 }
@@ -186,7 +187,7 @@ function Bars({ data, total, selected, onSelect, cur }) {
           <Pressable key={d.category} onPress={() => onSelect(d.category)} style={{ opacity: dim ? 0.35 : 1 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 }}>
               <Icon name={m.icon} size={16} color={m.color} />
-              <Text style={[s.body, { flex: 1, fontWeight: selected === d.category ? '800' : '600' }]} numberOfLines={1}>{d.category}</Text>
+              <Text style={[s.body, { flex: 1, fontWeight: selected === d.category ? '800' : '600' }]} numberOfLines={1}>{catLabel(d.category)}</Text>
               <Text style={[s.body, { fontWeight: '700', fontVariant: ['tabular-nums'] }]}>{money(d.total, cur)}</Text>
             </View>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
@@ -227,19 +228,19 @@ export default function InsightsScreen({ nav, params }) {
 
   return (
     <View style={{ flex: 1 }}>
-      <Header title="Insights" subtitle="Where your money goes" />
+      <Header title={L('Insights', '分析')} subtitle={L('Where your money goes', '你的钱花在哪里')} />
       <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 32 }}>
         <CompanySwitcher onManage={() => nav.push('settings')} style={{ marginBottom: 8 }} />
         <PeriodPicker period={period} onChange={(p) => { setPeriod(p); setSlice(null); }} />
 
         <View style={{ flexDirection: 'row', gap: 10, marginTop: 12 }}>
-          <Stat label="Total spent" value={money(total, cur)} />
-          <Stat label="Receipts" value={String(list.length)} />
+          <Stat label={L('Total spent', '总开支')} value={money(total, cur)} />
+          <Stat label={L('Receipts', '收据')} value={String(list.length)} />
         </View>
 
         {/* chart type */}
         <View style={{ flexDirection: 'row', backgroundColor: colors.surface2, borderRadius: radius.md, padding: 4, marginTop: 16 }}>
-          {CHARTS.map((c) => {
+          {CHARTS().map((c) => {
             const on = chart === c.key;
             return (
               <Pressable
@@ -257,7 +258,7 @@ export default function InsightsScreen({ nav, params }) {
         <SectionTitle>{periodLabel(period)}</SectionTitle>
         <Card>
           {cats.length === 0 ? (
-            <Text style={[s.sub, { textAlign: 'center', paddingVertical: 24 }]}>No spending in {periodLabel(period)}.</Text>
+            <Text style={[s.sub, { textAlign: 'center', paddingVertical: 24 }]}>{L(`No spending in ${periodLabel(period)}.`, `${periodLabel(period)}没有开支。`)}</Text>
           ) : chart === 'bar' ? (
             <Bars data={cats} total={total} selected={slice} onSelect={toggle} cur={cur} />
           ) : (
@@ -273,7 +274,7 @@ export default function InsightsScreen({ nav, params }) {
                 )}
                 {chart === 'doughnut' && (
                   <View pointerEvents="none" style={{ position: 'absolute', alignItems: 'center', width: 128 }}>
-                    <Text style={[s.section, { fontSize: 10, textAlign: 'center' }]} numberOfLines={2}>{sel ? sel.category : 'Total spent'}</Text>
+                    <Text style={[s.section, { fontSize: 10, textAlign: 'center' }]} numberOfLines={2}>{sel ? catLabel(sel.category) : L('Total spent', '总开支')}</Text>
                     <Text style={{ color: colors.text, fontSize: 21, fontWeight: '800', marginTop: 2 }} numberOfLines={1} adjustsFontSizeToFit>
                       {money(sel ? sel.total : total, cur)}
                     </Text>
@@ -284,7 +285,7 @@ export default function InsightsScreen({ nav, params }) {
               )}
               {chart === 'pie' && (
                 <Text style={[s.body, { textAlign: 'center', fontWeight: '700', marginBottom: 8 }]}>
-                  {sel ? `${sel.category} · ${money(sel.total, cur)} · ${((sel.total / total) * 100).toFixed(1)}%` : `Total ${money(total, cur)}`}
+                  {sel ? `${catLabel(sel.category)} · ${money(sel.total, cur)} · ${((sel.total / total) * 100).toFixed(1)}%` : `${L('Total', '总额')} ${money(total, cur)}`}
                 </Text>
               )}
 
@@ -300,7 +301,7 @@ export default function InsightsScreen({ nav, params }) {
                   >
                     <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: meta.color, marginRight: 10 }} />
                     <Text style={[s.body, { flex: 1 }]} numberOfLines={1}>
-                      {c.category} <Text style={s.sub}>· {c.count}</Text>
+                      {catLabel(c.category)} <Text style={s.sub}>· {c.count}</Text>
                     </Text>
                     <Text style={[s.body, { fontWeight: '700', fontVariant: ['tabular-nums'] }]}>{money(c.total, cur)}</Text>
                     <Text style={[s.sub, { width: 46, textAlign: 'right', fontVariant: ['tabular-nums'] }]}>{pct.toFixed(0)}%</Text>
@@ -309,7 +310,7 @@ export default function InsightsScreen({ nav, params }) {
               })}
             </>
           )}
-          {cats.length > 0 && <Text style={[s.sub, { fontSize: 11, textAlign: 'center', marginTop: 8 }]}>Tap a category to highlight it</Text>}
+          {cats.length > 0 && <Text style={[s.sub, { fontSize: 11, textAlign: 'center', marginTop: 8 }]}>{L('Tap a category to highlight it', '点击类别即可突出显示')}</Text>}
         </Card>
       </ScrollView>
     </View>

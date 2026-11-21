@@ -15,6 +15,7 @@ import { Icon } from './icons';
 import { colors } from './theme';
 import { isWeb } from './platform';
 import * as ImagePicker from 'expo-image-picker';
+import { L } from './i18n';
 
 // Map the on-screen guide frame onto the photo (the preview fills the screen like "cover").
 function frameToPhoto(frame, view, photo) {
@@ -143,12 +144,12 @@ export default function CameraModal({ nav }) {
             </View>
             <Text style={{ position: 'absolute', top: frame.y + frame.h + 12, left: 0, right: 0, textAlign: 'center', color: colors.text, fontSize: 14, fontWeight: '700' }}>
               {!granted
-                ? 'Camera access is needed to scan receipts'
-                : 'Fit the receipt inside the frame, then tap the camera button'}
+                ? L('Camera access is needed to scan receipts', '需要相机权限才能扫描收据')
+                : L('Fit the receipt inside the frame, then tap the camera button', '把收据放进框内，然后点击相机按钮')}
             </Text>
             {!aiReady && (
               <Text style={{ position: 'absolute', top: frame.y + frame.h + 34, left: 24, right: 24, textAlign: 'center', color: colors.accentInk, fontSize: 12 }}>
-                AI reading is off. You'll type the details after the photo.
+                {L("AI reading is off. You'll type the details after the photo.", 'AI 读取已关闭。拍照后需要手动填写详情。')}
               </Text>
             )}
           </>
@@ -160,7 +161,7 @@ export default function CameraModal({ nav }) {
             <Icon name="x" size={22} color={colors.text} />
           </Pressable>
           <View style={{ flex: 1, alignItems: 'center' }}>
-            <CompanySwitcher label="Save to" />
+            <CompanySwitcher label={L('Save to', '保存到')} />
           </View>
           <Pressable onPress={() => setTorch((t) => !t)} hitSlop={10} style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: torch ? colors.accent : colors.surface, borderWidth: 1, borderColor: torch ? colors.accent : colors.border, alignItems: 'center', justifyContent: 'center' }}>
             <Icon name="zap" size={20} color={torch ? colors.accentText : colors.text} />
@@ -171,7 +172,7 @@ export default function CameraModal({ nav }) {
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', paddingHorizontal: 36 }}>
             <Pressable onPress={goGallery} style={{ alignItems: 'center', width: 64 }}>
               <Icon name="images" size={26} color={colors.text} />
-              <Text style={{ color: colors.text, fontSize: 12, marginTop: 4 }}>Upload</Text>
+              <Text style={{ color: colors.text, fontSize: 12, marginTop: 4 }}>{L('Upload', '上传')}</Text>
             </Pressable>
             <Pressable onPress={granted ? shoot : requestPerm} disabled={shooting} style={{ width: 78, height: 78, borderRadius: 39, borderWidth: 4, borderColor: colors.accent + '66', alignItems: 'center', justifyContent: 'center' }}>
               <View style={{ width: 62, height: 62, borderRadius: 31, backgroundColor: shooting ? colors.faint : colors.accent, alignItems: 'center', justifyContent: 'center' }}>
@@ -180,13 +181,13 @@ export default function CameraModal({ nav }) {
             </Pressable>
             <Pressable onPress={goManual} style={{ alignItems: 'center', width: 64 }}>
               <Icon name="file-text" size={26} color={colors.text} />
-              <Text style={{ color: colors.text, fontSize: 12, marginTop: 4 }}>Manual</Text>
+              <Text style={{ color: colors.text, fontSize: 12, marginTop: 4 }}>{L('Manual', '手动')}</Text>
             </Pressable>
           </View>
           <View style={{ flexDirection: 'row', gap: 22, marginTop: 14 }}>
-            <Text onPress={goGallery} style={{ color: colors.muted, fontWeight: '700', fontSize: 12, letterSpacing: 1 }}>UPLOAD</Text>
-            <Text style={{ color: colors.accentInk, fontWeight: '800', fontSize: 12, letterSpacing: 1 }}>SCAN</Text>
-            <Text onPress={goManual} style={{ color: colors.muted, fontWeight: '700', fontSize: 12, letterSpacing: 1 }}>MANUAL · NO RECEIPT</Text>
+            <Text onPress={goGallery} style={{ color: colors.muted, fontWeight: '700', fontSize: 12, letterSpacing: 1 }}>{L('UPLOAD', '上传')}</Text>
+            <Text style={{ color: colors.accentInk, fontWeight: '800', fontSize: 12, letterSpacing: 1 }}>{L('SCAN', '扫描')}</Text>
+            <Text onPress={goManual} style={{ color: colors.muted, fontWeight: '700', fontSize: 12, letterSpacing: 1 }}>{L('MANUAL · NO RECEIPT', '手动 · 无收据')}</Text>
           </View>
         </View>
 
@@ -196,7 +197,7 @@ export default function CameraModal({ nav }) {
             <Image source={{ uri: busy.uri }} style={{ width: 200, height: 280, borderRadius: 14, borderWidth: 1, borderColor: colors.border }} resizeMode="cover" />
             <ActivityIndicator color={colors.accent} size="large" style={{ marginTop: 20 }} />
             <Text style={{ color: colors.text, fontSize: 18, fontWeight: '800', marginTop: 10 }}>{busy.label}</Text>
-            <Text style={{ color: colors.muted, marginTop: 4 }}>Merchant, date, items, tax and total</Text>
+            <Text style={{ color: colors.muted, marginTop: 4 }}>{L('Merchant, date, items, tax and total', '商家、日期、项目、税款和总额')}</Text>
           </View>
         )}
       </View>
