@@ -1,4 +1,5 @@
 import { CATEGORY_KEYS } from './categories';
+import { L, isZh, monthShort } from './i18n';
 
 // Shared helpers: ids, dates, money, filtering, summaries and data-quality checks.
 
@@ -17,8 +18,8 @@ export function money(amount, currency = 'MYR') {
 export function prettyDate(iso) {
   if (!iso) return '—';
   const [y, m, d] = iso.split('-').map(Number);
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  return `${d} ${months[m - 1]} ${y}`;
+  if (isZh()) return `${y}年${m}月${d}日`;
+  return `${d} ${monthShort(m - 1)} ${y}`;
 }
 
 // Date range presets used across Reports / Export / Accounting.
@@ -44,12 +45,12 @@ export function rangeFor(preset) {
 }
 
 export const RANGE_PRESETS = [
-  { key: 'this_month', label: 'This month' },
-  { key: 'last_month', label: 'Last month' },
-  { key: 'this_quarter', label: 'This quarter' },
-  { key: 'this_year', label: 'This year' },
-  { key: 'last_year', label: 'Last year' },
-  { key: 'all', label: 'All time' },
+  { key: 'this_month', label: () => L('This month', '本月') },
+  { key: 'last_month', label: () => L('Last month', '上个月') },
+  { key: 'this_quarter', label: () => L('This quarter', '本季度') },
+  { key: 'this_year', label: () => L('This year', '今年') },
+  { key: 'last_year', label: () => L('Last year', '去年') },
+  { key: 'all', label: () => L('All time', '全部时间') },
 ];
 
 export const inRange = (r, from, to) => (!from || r.date >= from) && (!to || r.date <= to);
@@ -94,7 +95,7 @@ export function byMonth(list, months = 6) {
   for (let i = months - 1; i >= 0; i--) {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
     const key = `${d.getFullYear()}-${pad(d.getMonth() + 1)}`;
-    const label = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][d.getMonth()];
+    const label = monthShort(d.getMonth());
     out.push({ key, label, total: sum(list.filter((r) => (r.date || '').startsWith(key))) });
   }
   return out;
@@ -141,14 +142,14 @@ export function findIssues(receipts) {
   const issues = [];
   const kept = [];
   receipts.forEach((r) => {
-    if (r.status === 'needs_review') issues.push({ type: 'needs_review', id: r.id, label: 'Needs review', receipt: r });
+    if (r.status === 'needs_review') issues.push({ type: 'needs_review', id: r.id, label: ISSUE_LABELS.needs_review, receipt: r });
     // "Others" is a valid choice; only a missing or unknown category is flagged.
-    if (!CATEGORY_KEYS.includes(r.category)) issues.push({ type: 'uncategorized', id: r.id, label: 'Uncategorised', receipt: r });
-    if (!r.total || r.total <= 0) issues.push({ type: 'no_total', id: r.id, label: 'Missing total', receipt: r });
-    if (!r.imageUri) issues.push({ type: 'no_image', id: r.id, label: 'No receipt image', receipt: r });
+    if (!CATEGORY_KEYS.includes(r.category)) issues.push({ type: 'uncategorized', id: r.id, label: ISSUE_LABELS.uncategorized, receipt: r });
+    if (!r.total || r.total <= 0) issues.push({ type: 'no_total', id: r.id, label: ISSUE_LABELS.no_total, receipt: r });
+    if (!r.imageUri) issues.push({ type: 'no_image', id: r.id, label: ISSUE_LABELS.no_image, receipt: r });
     if (!r.confirmedUnique) {
       const other = kept.find((k) => isLikelyDuplicate(k, r));
-      if (other) issues.push({ type: 'duplicate', id: r.id, otherId: other.id, label: 'Possible duplicate', receipt: r });
+      if (other) issues.push({ type: 'duplicate', id: r.id, otherId: other.id, label: ISSUE_LABELS.duplicate, receipt: r });
       else kept.push(r);
     }
   });
@@ -157,10 +158,11 @@ export function findIssues(receipts) {
   return issues.sort((a, b) => order.indexOf(a.type) - order.indexOf(b.type));
 }
 
+// Read at render time so the text follows the app language.
 export const ISSUE_LABELS = {
-  needs_review: 'Needs review',
-  uncategorized: 'Uncategorised',
-  no_total: 'Missing total',
-  no_image: 'No receipt image',
-  duplicate: 'Possible duplicate',
+  get needs_review() { return L('Needs review', '需要审核'); },
+  get uncategorized() { return L('Uncategorised', '未分类'); },
+  get no_total() { return L('Missing total', '缺少总额'); },
+  get no_image() { return L('No receipt image', '没有收据图片'); },
+  get duplicate() { return L('Possible duplicate', '可能重复'); },
 };

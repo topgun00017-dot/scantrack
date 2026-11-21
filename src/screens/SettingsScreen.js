@@ -11,6 +11,7 @@ import { Icon } from '../icons';
 import { testAI, cleanKey } from '../ai';
 import { Button, Chip, Field, Header, SectionTitle, s } from '../components';
 import { colors } from '../theme';
+import { L, LANGUAGES, getLang, setLanguage } from '../i18n';
 
 // AI settings are behind a password. Only a hash is stored on the phone; until it is changed
 // the default password is ai2026*. This keeps casual users out of the API key settings.
@@ -55,22 +56,23 @@ export default function SettingsScreen({ nav }) {
     setConnecting(true);
     try {
       const who = await drive.connect();
-      if (who) showAlert('Google Drive connected', `Receipts will be saved to ${who.email}'s Google Drive, in the "ScanTrack Receipts" folder.`);
+      if (who) showAlert(L('Google Drive connected', 'Google 云端硬盘已连接'), L(`Receipts will be saved to ${who.email}'s Google Drive, in the "ScanTrack Receipts" folder.`, `收据将保存到 ${who.email} 的 Google 云端硬盘中的“ScanTrack Receipts”文件夹。`));
     } catch (e) {
-      showAlert('Could not connect Google Drive', e.message);
+      showAlert(L('Could not connect Google Drive', '无法连接 Google 云端硬盘'), e.message);
     } finally {
       setConnecting(false);
     }
   };
+  const lastSync = drive.status.lastSync ? new Date(drive.status.lastSync).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '';
   const driveLine = drive.status.syncing
-    ? 'Saving to Google Drive…'
+    ? L('Saving to Google Drive…', '正在保存到 Google 云端硬盘…')
     : drive.status.error
-    ? `Not saved: ${drive.status.error}`
+    ? L(`Not saved: ${drive.status.error}`, `未保存：${drive.status.error}`)
     : drive.waiting
-    ? `${drive.waiting} receipt(s) waiting to upload`
+    ? L(`${drive.waiting} receipt(s) waiting to upload`, `${drive.waiting} 张收据等待上传`)
     : drive.status.lastSync
-    ? `All receipts saved · last sync ${new Date(drive.status.lastSync).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`
-    : 'Receipts are saved automatically after each change';
+    ? L(`All receipts saved · last sync ${lastSync}`, `所有收据已保存 · 上次同步 ${lastSync}`)
+    : L('Receipts are saved automatically after each change', '每次更改后都会自动保存收据');
   const [f, setF] = useState(settings);
   const set = (k) => (v) => setF((x) => ({ ...x, [k]: v }));
   const demoCount = receipts.filter((r) => r.demo).length;
@@ -80,16 +82,16 @@ export default function SettingsScreen({ nav }) {
   const passOk = (p) => hashPass(p) === (settings.aiPassHash || hashPass(DEFAULT_AI_PASSWORD));
   const submitPw = () => {
     if (pw.mode === 'unlock') {
-      if (!passOk(pw.a)) return setPw({ ...pw, a: '', error: 'Wrong password. Try again.' });
+      if (!passOk(pw.a)) return setPw({ ...pw, a: '', error: L('Wrong password. Try again.', '密码错误，请重试。') });
       setAiOpen(true);
       return setPw(null);
     }
-    if (!passOk(pw.cur || '')) return setPw({ ...pw, error: 'Current password is wrong.' });
-    if ((pw.a || '').length < 4) return setPw({ ...pw, error: 'Use at least 4 characters.' });
-    if (pw.a !== pw.b) return setPw({ ...pw, error: "The new passwords don't match." });
+    if (!passOk(pw.cur || '')) return setPw({ ...pw, error: L('Current password is wrong.', '当前密码错误。') });
+    if ((pw.a || '').length < 4) return setPw({ ...pw, error: L('Use at least 4 characters.', '至少使用 4 个字符。') });
+    if (pw.a !== pw.b) return setPw({ ...pw, error: L("The new passwords don't match.", '两次输入的新密码不一致。') });
     setSettings({ aiPassHash: hashPass(pw.a) });
     setPw(null);
-    showAlert('Password changed', 'Use the new password next time you open the AI settings.');
+    showAlert(L('Password changed', '密码已更改'), L('Use the new password next time you open the AI settings.', '下次打开 AI 设置时请使用新密码。'));
   };
   const openai = f.provider === 'openai';
 
@@ -98,9 +100,9 @@ export default function SettingsScreen({ nav }) {
     try {
       await testAI(f);
       saveForm();
-      showAlert('Connected', `${openai ? 'ChatGPT (OpenAI)' : 'Claude'} is working. Your settings are saved.`);
+      showAlert(L('Connected', '已连接'), L(`${openai ? 'ChatGPT (OpenAI)' : 'Claude'} is working. Your settings are saved.`, `${openai ? 'ChatGPT (OpenAI)' : 'Claude'} 运行正常，设置已保存。`));
     } catch (e) {
-      showAlert('Connection failed', e.message === 'NO_KEY' ? 'Paste an API key first.' : e.message);
+      showAlert(L('Connection failed', '连接失败'), e.message === 'NO_KEY' ? L('Paste an API key first.', '请先粘贴 API 密钥。') : e.message);
     } finally {
       setTesting(false);
     }
@@ -108,26 +110,43 @@ export default function SettingsScreen({ nav }) {
 
   return (
     <View style={{ flex: 1 }}>
-      <Header title="Settings" onBack={nav.back} />
+      <Header title={L('Settings', '设置')} onBack={nav.back} />
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 48 + bottomInset + keyboard }} keyboardShouldPersistTaps="handled">
-        <SectionTitle>Companies</SectionTitle>
+        {/* Shown in both languages so it can always be found. Switching reloads the app in the new language. */}
+        <SectionTitle>Language · 语言</SectionTitle>
+        <View style={{ flexDirection: 'row', gap: 8 }}>
+          {LANGUAGES.map((l) => (
+            <Chip
+              key={l.key}
+              label={l.label}
+              active={getLang() === l.key}
+              onPress={() => {
+                if (getLang() === l.key) return;
+                saveForm();
+                setTimeout(() => setLanguage(l.key), 300); // let the settings save before the app reloads
+              }}
+            />
+          ))}
+        </View>
+
+        <SectionTitle>{L('Companies', '公司')}</SectionTitle>
         {companies.map((c) => (
           <View key={c.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8 }}>
             <CompanyDot color={c.color} size={12} />
             <Text style={[s.body, { flex: 1, fontWeight: c.id === active?.id ? '700' : '400' }]} numberOfLines={1}>
               {c.name}
-              {c.id === active?.id ? <Text style={s.sub}>  · current</Text> : null}
+              {c.id === active?.id ? <Text style={s.sub}>{L('  · current', '  · 当前')}</Text> : null}
             </Text>
             <Pressable hitSlop={8} onPress={() => { setNameError(''); setNameBox({ id: c.id, value: c.name }); }} style={{ paddingHorizontal: 6 }}>
-              <Text style={{ color: colors.accentInk, fontWeight: '700' }}>Rename</Text>
+              <Text style={{ color: colors.accentInk, fontWeight: '700' }}>{L('Rename', '重命名')}</Text>
             </Pressable>
             {companies.length > 1 && (
               <Pressable
                 hitSlop={8}
                 onPress={() =>
-                  showAlert(`Delete ${c.name}?`, `This permanently removes ${c.name}'s receipts and reports from this phone. Copies already in Google Drive are kept.`, [
-                    { text: 'Cancel', style: 'cancel' },
-                    { text: 'Delete', style: 'destructive', onPress: () => deleteCompany(c.id).catch((e) => showAlert('Could not delete', e.message)) },
+                  showAlert(L(`Delete ${c.name}?`, `删除 ${c.name}？`), L(`This permanently removes ${c.name}'s receipts and reports from this phone. Copies already in Google Drive are kept.`, `这会从本手机永久删除 ${c.name} 的收据和报告。已保存在 Google 云端硬盘中的副本会保留。`), [
+                    { text: L('Cancel', '取消'), style: 'cancel' },
+                    { text: L('Delete', '删除'), style: 'destructive', onPress: () => deleteCompany(c.id).catch((e) => showAlert(L('Could not delete', '无法删除'), e.message)) },
                   ])
                 }
               >
@@ -136,21 +155,21 @@ export default function SettingsScreen({ nav }) {
             )}
           </View>
         ))}
-        <Button small title="Add company" icon="plus" variant="secondary" style={{ marginTop: 8 }} onPress={() => { setNameError(''); setNameBox({ value: '' }); }} />
+        <Button small title={L('Add company', '添加公司')} icon="plus" variant="secondary" style={{ marginTop: 8 }} onPress={() => { setNameError(''); setNameBox({ value: '' }); }} />
         <Modal visible={!!pw} transparent animationType="fade" onRequestClose={() => setPw(null)}>
           <Pressable style={{ flex: 1, backgroundColor: '#0008', justifyContent: 'flex-start', paddingTop: 110, paddingHorizontal: 20 }} onPress={() => setPw(null)}>
             <Pressable style={{ backgroundColor: colors.surface, borderRadius: 18, padding: 20 }} onPress={() => {}}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                 <Icon name={pw?.mode === 'change' ? 'lock' : 'lock-open'} size={22} color={colors.accentInk} />
-                <Text style={s.h2}>{pw?.mode === 'change' ? 'Change AI password' : 'Unlock AI settings'}</Text>
+                <Text style={s.h2}>{pw?.mode === 'change' ? L('Change AI password', '更改 AI 密码') : L('Unlock AI settings', '解锁 AI 设置')}</Text>
               </View>
               {pw?.mode === 'change' && (
-                <TextInput value={pw.cur} onChangeText={(v) => setPw((p) => ({ ...p, cur: v, error: '' }))} placeholder="Current password" placeholderTextColor={colors.faint} secureTextEntry autoFocus autoCapitalize="none" autoCorrect={false} style={[s.input, { marginTop: 14 }]} />
+                <TextInput value={pw.cur} onChangeText={(v) => setPw((p) => ({ ...p, cur: v, error: '' }))} placeholder={L('Current password', '当前密码')} placeholderTextColor={colors.faint} secureTextEntry autoFocus autoCapitalize="none" autoCorrect={false} style={[s.input, { marginTop: 14 }]} />
               )}
               <TextInput
                 value={pw?.a || ''}
                 onChangeText={(v) => setPw((p) => ({ ...p, a: v, error: '' }))}
-                placeholder={pw?.mode === 'change' ? 'New password' : 'Password'}
+                placeholder={pw?.mode === 'change' ? L('New password', '新密码') : L('Password', '密码')}
                 placeholderTextColor={colors.faint}
                 secureTextEntry
                 autoFocus={pw?.mode !== 'change'}
@@ -160,12 +179,12 @@ export default function SettingsScreen({ nav }) {
                 style={[s.input, { marginTop: pw?.mode === 'change' ? 10 : 14 }]}
               />
               {pw?.mode === 'change' && (
-                <TextInput value={pw.b} onChangeText={(v) => setPw((p) => ({ ...p, b: v, error: '' }))} placeholder="New password again" placeholderTextColor={colors.faint} secureTextEntry autoCapitalize="none" autoCorrect={false} onSubmitEditing={submitPw} style={[s.input, { marginTop: 10 }]} />
+                <TextInput value={pw.b} onChangeText={(v) => setPw((p) => ({ ...p, b: v, error: '' }))} placeholder={L('New password again', '再次输入新密码')} placeholderTextColor={colors.faint} secureTextEntry autoCapitalize="none" autoCorrect={false} onSubmitEditing={submitPw} style={[s.input, { marginTop: 10 }]} />
               )}
               {!!pw?.error && <Text style={{ color: colors.danger, marginTop: 8 }}>{pw.error}</Text>}
               <View style={{ flexDirection: 'row', gap: 10, marginTop: 16 }}>
-                <Button title="Cancel" variant="secondary" style={{ flex: 1 }} onPress={() => setPw(null)} />
-                <Button title={pw?.mode === 'change' ? 'Save' : 'Unlock'} style={{ flex: 1 }} onPress={submitPw} />
+                <Button title={L('Cancel', '取消')} variant="secondary" style={{ flex: 1 }} onPress={() => setPw(null)} />
+                <Button title={pw?.mode === 'change' ? L('Save', '保存') : L('Unlock', '解锁')} style={{ flex: 1 }} onPress={submitPw} />
               </View>
             </Pressable>
           </Pressable>
@@ -173,11 +192,11 @@ export default function SettingsScreen({ nav }) {
         <Modal visible={!!nameBox} transparent animationType="fade" onRequestClose={() => setNameBox(null)}>
           <Pressable style={{ flex: 1, backgroundColor: '#0008', justifyContent: 'center', padding: 20 }} onPress={() => setNameBox(null)}>
             <Pressable style={{ backgroundColor: colors.surface, borderRadius: 18, padding: 20 }} onPress={() => {}}>
-              <Text style={s.h2}>{nameBox?.id ? 'Rename company' : 'Add company'}</Text>
+              <Text style={s.h2}>{nameBox?.id ? L('Rename company', '重命名公司') : L('Add company', '添加公司')}</Text>
               <TextInput
                 value={nameBox?.value || ''}
                 onChangeText={(v) => { setNameBox((b) => ({ ...b, value: v })); setNameError(''); }}
-                placeholder="Company name, e.g. ABC Sdn Bhd"
+                placeholder={L('Company name, e.g. ABC Sdn Bhd', '公司名称，例如：ABC Sdn Bhd')}
                 placeholderTextColor={colors.faint}
                 maxLength={40}
                 autoFocus
@@ -186,57 +205,57 @@ export default function SettingsScreen({ nav }) {
               />
               {!!nameError && <Text style={{ color: colors.danger, marginTop: 6 }}>{nameError}</Text>}
               <View style={{ flexDirection: 'row', gap: 8, marginTop: 14 }}>
-                <Button small title="Cancel" variant="secondary" style={{ flex: 1 }} onPress={() => setNameBox(null)} />
-                <Button small title={nameBox?.id ? 'Save' : 'Add company'} style={{ flex: 2 }} disabled={!(nameBox?.value || '').trim()} onPress={saveCompanyName} />
+                <Button small title={L('Cancel', '取消')} variant="secondary" style={{ flex: 1 }} onPress={() => setNameBox(null)} />
+                <Button small title={nameBox?.id ? L('Save', '保存') : L('Add company', '添加公司')} style={{ flex: 2 }} disabled={!(nameBox?.value || '').trim()} onPress={saveCompanyName} />
               </View>
             </Pressable>
           </Pressable>
         </Modal>
 
-        <SectionTitle>You</SectionTitle>
-        <Field label="Your name" value={f.name} onChangeText={set('name')} placeholder="Shown on reports" />
+        <SectionTitle>{L('You', '你')}</SectionTitle>
+        <Field label={L('Your name', '你的名字')} value={f.name} onChangeText={set('name')} placeholder={L('Shown on reports', '显示在报告上')} />
 
-        <SectionTitle>{`This company · ${active?.name || ''}`}</SectionTitle>
-        <Field label="Company name on reports & PDFs" value={f.company} onChangeText={set('company')} placeholder={active?.name || 'Optional'} />
-        <Text style={s.label}>Default currency</Text>
+        <SectionTitle>{`${L('This company', '本公司')} · ${active?.name || ''}`}</SectionTitle>
+        <Field label={L('Company name on reports & PDFs', '报告和 PDF 上的公司名称')} value={f.company} onChangeText={set('company')} placeholder={active?.name || L('Optional', '可选')} />
+        <Text style={s.label}>{L('Default currency', '默认货币')}</Text>
         <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
           {CURRENCIES.map((c) => <Chip key={c} label={c} active={f.currency === c} onPress={() => set('currency')(c)} />)}
         </View>
 
         {!webAI && (
           <>
-            <SectionTitle>Google Drive backup</SectionTitle>
+            <SectionTitle>{L('Google Drive backup', 'Google 云端硬盘备份')}</SectionTitle>
             {!drive.available ? (
-              <Text style={s.sub}>Available in the installed app (not in Expo Go).</Text>
+              <Text style={s.sub}>{L('Available in the installed app (not in Expo Go).', '仅在已安装的应用中可用（Expo Go 中不可用）。')}</Text>
             ) : settings.driveEnabled ? (
               <>
-                <Text style={s.body}>Signed in as {settings.driveEmail}</Text>
+                <Text style={s.body}>{L('Signed in as', '已登录')} {settings.driveEmail}</Text>
                 <Text style={[s.sub, { marginTop: 4, color: drive.status.error ? colors.danger : colors.muted }]}>{driveLine}</Text>
-                <Text style={[s.sub, { marginTop: 4 }]}>Photos go to My Drive › ScanTrack Receipts › year › month, with a "ScanTrack receipts list" sheet of all receipts.</Text>
+                <Text style={[s.sub, { marginTop: 4 }]}>{L('Photos go to My Drive › ScanTrack Receipts › year › month, with a "ScanTrack receipts list" sheet of all receipts.', '照片保存到 我的云端硬盘 › ScanTrack Receipts › 年 › 月，并附有包含所有收据的“ScanTrack receipts list”表格。')}</Text>
                 <View style={{ flexDirection: 'row', gap: 8, marginTop: 10 }}>
                   {drive.status.error ? (
-                    <Button small title="Sign in again" variant="secondary" style={{ flex: 1 }} loading={connecting} onPress={connect} />
+                    <Button small title={L('Sign in again', '重新登录')} variant="secondary" style={{ flex: 1 }} loading={connecting} onPress={connect} />
                   ) : (
-                    <Button small title="Sync now" variant="secondary" style={{ flex: 1 }} loading={drive.status.syncing} onPress={drive.syncNow} />
+                    <Button small title={L('Sync now', '立即同步')} variant="secondary" style={{ flex: 1 }} loading={drive.status.syncing} onPress={drive.syncNow} />
                   )}
-                  <Button small title="Sign out" variant="danger" style={{ flex: 1 }} onPress={() => showAlert('Stop saving to Google Drive?', 'Files already in your Drive are kept.', [{ text: 'Cancel', style: 'cancel' }, { text: 'Sign out', style: 'destructive', onPress: drive.disconnect }])} />
+                  <Button small title={L('Sign out', '退出登录')} variant="danger" style={{ flex: 1 }} onPress={() => showAlert(L('Stop saving to Google Drive?', '停止保存到 Google 云端硬盘？'), L('Files already in your Drive are kept.', '已在云端硬盘中的文件会保留。'), [{ text: L('Cancel', '取消'), style: 'cancel' }, { text: L('Sign out', '退出登录'), style: 'destructive', onPress: drive.disconnect }])} />
                 </View>
               </>
             ) : (
               <>
-                <Text style={[s.sub, { marginBottom: 8 }]}>Sign in with Google to save every receipt photo to your Google Drive automatically.</Text>
-                <Button title="Sign in with Google" variant="secondary" loading={connecting} onPress={connect} />
+                <Text style={[s.sub, { marginBottom: 8 }]}>{L('Sign in with Google to save every receipt photo to your Google Drive automatically.', '使用 Google 登录后，每张收据照片都会自动保存到你的 Google 云端硬盘。')}</Text>
+                <Button title={L('Sign in with Google', '使用 Google 登录')} variant="secondary" loading={connecting} onPress={connect} />
                 <Text style={[s.sub, { marginTop: 8, fontSize: 11 }]} selectable>
-                  Google Cloud setup: Android OAuth client · package com.scantrack.app · SHA-1 5E:8F:16:06:2E:A3:CD:2C:4A:0D:54:78:76:BA:A6:F3:8C:AB:F6:25
+                  {L('Google Cloud setup', 'Google Cloud 设置')}: Android OAuth client · package com.scantrack.app · SHA-1 5E:8F:16:06:2E:A3:CD:2C:4A:0D:54:78:76:BA:A6:F3:8C:AB:F6:25
                 </Text>
               </>
             )}
           </>
         )}
 
-        <SectionTitle>My categories</SectionTitle>
+        <SectionTitle>{L('My categories', '我的类别')}</SectionTitle>
         {(settings.customCategories || []).length === 0 && (
-          <Text style={[s.sub, { marginBottom: 8 }]}>Add your own categories here or from a receipt's category list. They work everywhere: filters, exports, reports and AI scanning.</Text>
+          <Text style={[s.sub, { marginBottom: 8 }]}>{L("Add your own categories here or from a receipt's category list. They work everywhere: filters, exports, reports and AI scanning.", '在这里或在收据的类别列表中添加自己的类别。它们在筛选、导出、报告和 AI 扫描中都可使用。')}</Text>
         )}
         {(settings.customCategories || []).map((c) => {
           const used = receipts.filter((r) => r.category === c.key).length;
@@ -247,14 +266,14 @@ export default function SettingsScreen({ nav }) {
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={s.body}>{c.key}</Text>
-                <Text style={s.sub}>{used} receipt{used === 1 ? '' : 's'}</Text>
+                <Text style={s.sub}>{L(`${used} receipt${used === 1 ? '' : 's'}`, `${used} 张收据`)}</Text>
               </View>
               <Pressable
                 hitSlop={10}
                 onPress={() =>
-                  showAlert(`Delete "${c.key}"?`, used ? `Its ${used} receipt${used === 1 ? '' : 's'} will move to Others.` : 'No receipts use it.', [
-                    { text: 'Cancel', style: 'cancel' },
-                    { text: 'Delete', style: 'destructive', onPress: () => deleteCategory(c.key) },
+                  showAlert(L(`Delete "${c.key}"?`, `删除“${c.key}”？`), used ? L(`Its ${used} receipt${used === 1 ? '' : 's'} will move to Others.`, `其中的 ${used} 张收据将移到“其他”。`) : L('No receipts use it.', '没有收据使用此类别。'), [
+                    { text: L('Cancel', '取消'), style: 'cancel' },
+                    { text: L('Delete', '删除'), style: 'destructive', onPress: () => deleteCategory(c.key) },
                   ])
                 }
               >
@@ -263,69 +282,69 @@ export default function SettingsScreen({ nav }) {
             </View>
           );
         })}
-        <Button small title="Add category" icon="plus" variant="secondary" style={{ marginTop: 8 }} onPress={() => setCatEditor(true)} />
+        <Button small title={L('Add category', '添加类别')} icon="plus" variant="secondary" style={{ marginTop: 8 }} onPress={() => setCatEditor(true)} />
         <CategoryEditor visible={catEditor} onClose={() => setCatEditor(false)} />
 
         <View style={{ height: 18 }} />
-        <Field label="Account's email" value={f.accountantEmail} onChangeText={set('accountantEmail')} keyboardType="email-address" autoCapitalize="none" />
+        <Field label={L("Account's email", '会计师邮箱')} value={f.accountantEmail} onChangeText={set('accountantEmail')} keyboardType="email-address" autoCapitalize="none" />
 
         {webAI ? (
           <>
-            <SectionTitle>AI (receipt reading & assistant)</SectionTitle>
-            <Text style={[s.sub, { marginBottom: 8 }]}>On this page, receipt reading and the assistant use your own Claude account. You'll be asked to allow it the first time.</Text>
+            <SectionTitle>{L('AI (receipt reading & assistant)', 'AI（收据读取和助手）')}</SectionTitle>
+            <Text style={[s.sub, { marginBottom: 8 }]}>{L("On this page, receipt reading and the assistant use your own Claude account. You'll be asked to allow it the first time.", '在此页面上，收据读取和助手会使用你自己的 Claude 帐号。第一次使用时会请求你允许。')}</Text>
           </>
         ) : (
           <>
-            <SectionTitle right={aiOpen ? <Text style={{ color: colors.accentInk, fontWeight: '700' }} onPress={() => setAiOpen(false)}>Lock</Text> : null}>AI (receipt reading & assistant)</SectionTitle>
+            <SectionTitle right={aiOpen ? <Text style={{ color: colors.accentInk, fontWeight: '700' }} onPress={() => setAiOpen(false)}>{L('Lock', '锁定')}</Text> : null}>{L('AI (receipt reading & assistant)', 'AI（收据读取和助手）')}</SectionTitle>
             {!aiOpen ? (
               <Pressable onPress={() => setPw({ mode: 'unlock', a: '' })} style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.surface, borderRadius: 14, borderWidth: 1, borderColor: colors.border, padding: 14, marginBottom: 8, opacity: pressed ? 0.7 : 1 })}>
                 <Icon name="lock" size={22} color={colors.muted} />
                 <View style={{ flex: 1 }}>
-                  <Text style={[s.body, { fontWeight: '700' }]}>Password protected</Text>
-                  <Text style={s.sub}>Enter the password to view or change the AI settings.</Text>
+                  <Text style={[s.body, { fontWeight: '700' }]}>{L('Password protected', '密码保护')}</Text>
+                  <Text style={s.sub}>{L('Enter the password to view or change the AI settings.', '输入密码以查看或更改 AI 设置。')}</Text>
                 </View>
-                <Text style={{ color: colors.accentInk, fontWeight: '700' }}>Unlock</Text>
+                <Text style={{ color: colors.accentInk, fontWeight: '700' }}>{L('Unlock', '解锁')}</Text>
               </Pressable>
             ) : (
             <>
-            <Text style={s.label}>Provider</Text>
+            <Text style={s.label}>{L('Provider', '服务商')}</Text>
             <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}>
               <Chip label="Claude" active={!openai} onPress={() => set('provider')('claude')} />
               <Chip label="ChatGPT (OpenAI)" active={openai} onPress={() => set('provider')('openai')} />
             </View>
             {openai ? (
               <>
-                <Field label="OpenAI API key" value={f.openaiKey} onChangeText={(v) => set('openaiKey')(cleanKey(v))} placeholder="sk-…" autoCapitalize="none" autoCorrect={false} secureTextEntry />
-                <Field label="Model" value={f.openaiModel} onChangeText={(v) => set('openaiModel')(v.trim())} autoCapitalize="none" autoCorrect={false} />
-                <Text style={[s.sub, { marginBottom: 8 }]}>Get a key at platform.openai.com → API keys. API usage is billed separately from a ChatGPT Plus subscription.</Text>
+                <Field label={L('OpenAI API key', 'OpenAI API 密钥')} value={f.openaiKey} onChangeText={(v) => set('openaiKey')(cleanKey(v))} placeholder="sk-…" autoCapitalize="none" autoCorrect={false} secureTextEntry />
+                <Field label={L('Model', '模型')} value={f.openaiModel} onChangeText={(v) => set('openaiModel')(v.trim())} autoCapitalize="none" autoCorrect={false} />
+                <Text style={[s.sub, { marginBottom: 8 }]}>{L('Get a key at platform.openai.com → API keys. API usage is billed separately from a ChatGPT Plus subscription.', '在 platform.openai.com → API keys 获取密钥。API 用量与 ChatGPT Plus 订阅分开计费。')}</Text>
               </>
             ) : (
               <>
-                <Field label="Claude API key" value={f.apiKey} onChangeText={(v) => set('apiKey')(cleanKey(v))} placeholder="sk-ant-…" autoCapitalize="none" autoCorrect={false} secureTextEntry />
-                <Field label="Model" value={f.model} onChangeText={set('model')} autoCapitalize="none" autoCorrect={false} />
-                <Text style={[s.sub, { marginBottom: 8 }]}>Get a key at console.anthropic.com → API keys. API usage is billed separately from a Claude subscription.</Text>
+                <Field label={L('Claude API key', 'Claude API 密钥')} value={f.apiKey} onChangeText={(v) => set('apiKey')(cleanKey(v))} placeholder="sk-ant-…" autoCapitalize="none" autoCorrect={false} secureTextEntry />
+                <Field label={L('Model', '模型')} value={f.model} onChangeText={set('model')} autoCapitalize="none" autoCorrect={false} />
+                <Text style={[s.sub, { marginBottom: 8 }]}>{L('Get a key at console.anthropic.com → API keys. API usage is billed separately from a Claude subscription.', '在 console.anthropic.com → API keys 获取密钥。API 用量与 Claude 订阅分开计费。')}</Text>
               </>
             )}
-            <Button title="Test connection" variant="secondary" loading={testing} onPress={test} style={{ marginBottom: 8 }} />
+            <Button title={L('Test connection', '测试连接')} variant="secondary" loading={testing} onPress={test} style={{ marginBottom: 8 }} />
             <Text style={[s.sub, { marginBottom: 8 }]}>
-          The key is stored only on this phone and is meant for testing. Before publishing the app, move AI calls to your own server so the key isn't shipped in the app.
+          {L("The key is stored only on this phone and is meant for testing. Before publishing the app, move AI calls to your own server so the key isn't shipped in the app.", '密钥只保存在本手机上，仅供测试使用。正式发布应用前，请把 AI 调用移到你自己的服务器，以免密钥随应用发布。')}
             </Text>
-            <Button small title="Change AI password" icon="lock" variant="secondary" onPress={() => setPw({ mode: 'change', cur: '', a: '', b: '' })} style={{ marginBottom: 8 }} />
+            <Button small title={L('Change AI password', '更改 AI 密码')} icon="lock" variant="secondary" onPress={() => setPw({ mode: 'change', cur: '', a: '', b: '' })} style={{ marginBottom: 8 }} />
             </>
             )}
 
           </>
         )}
 
-        <Button title="Save settings" onPress={() => { saveForm(); nav.back(); }} style={{ marginTop: 12 }} />
+        <Button title={L('Save settings', '保存设置')} onPress={() => { saveForm(); nav.back(); }} style={{ marginTop: 12 }} />
 
         {demoCount > 0 && (
           <>
-            <SectionTitle>Sample data</SectionTitle>
+            <SectionTitle>{L('Sample data', '示例数据')}</SectionTitle>
             <Button
-              title={`Remove ${demoCount} sample receipts`}
+              title={L(`Remove ${demoCount} sample receipts`, `删除 ${demoCount} 张示例收据`)}
               variant="danger"
-              onPress={() => showAlert('Remove sample data', 'Your own receipts are kept.', [{ text: 'Cancel' }, { text: 'Remove', style: 'destructive', onPress: clearDemo }])}
+              onPress={() => showAlert(L('Remove sample data', '删除示例数据'), L('Your own receipts are kept.', '你自己的收据会保留。'), [{ text: L('Cancel', '取消') }, { text: L('Remove', '删除'), style: 'destructive', onPress: clearDemo }])}
             />
           </>
         )}

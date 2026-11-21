@@ -6,6 +6,7 @@ import { Button, s } from './components';
 import { Icon } from './icons';
 import { colors, radius } from './theme';
 import { showToast } from './Toast';
+import { L } from './i18n';
 
 export function CompanyDot({ color, size = 10 }) {
   return <View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: color }} />;
@@ -23,7 +24,7 @@ export default function CompanySwitcher({ label, style, onManage }) {
     setOpen(false);
     if (c.id !== active.id) {
       switchCompany(c.id);
-      showToast({ title: `Switched to ${c.name}`, text: 'New receipts are saved to this company.' });
+      showToast({ title: L(`Switched to ${c.name}`, `已切换到 ${c.name}`), text: L('New receipts are saved to this company.', '新收据将保存到这家公司。') });
     }
   };
 
@@ -61,7 +62,7 @@ export default function CompanySwitcher({ label, style, onManage }) {
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
           <Pressable style={{ flex: 1, backgroundColor: '#0008', justifyContent: 'center', padding: 24 }} onPress={() => setOpen(false)}>
             <Pressable style={{ backgroundColor: colors.surface, borderRadius: radius.lg, paddingVertical: 8, maxHeight: '80%' }} onPress={() => {}}>
-              <Text style={[s.h2, { paddingHorizontal: 16, paddingVertical: 10 }]}>Company</Text>
+              <Text style={[s.h2, { paddingHorizontal: 16, paddingVertical: 10 }]}>{L('Company', '公司')}</Text>
               <ScrollView keyboardShouldPersistTaps="handled">
                 {companies.map((c) => {
                   const on = c.id === active.id;
@@ -87,7 +88,7 @@ export default function CompanySwitcher({ label, style, onManage }) {
                         setName(v);
                         setError('');
                       }}
-                      placeholder="Company name, e.g. ABC Sdn Bhd"
+                      placeholder={L('Company name, e.g. ABC Sdn Bhd', '公司名称，例如：ABC Sdn Bhd')}
                       placeholderTextColor={colors.faint}
                       maxLength={40}
                       autoFocus
@@ -96,17 +97,17 @@ export default function CompanySwitcher({ label, style, onManage }) {
                     />
                     {!!error && <Text style={{ color: colors.danger, marginTop: 6 }}>{error}</Text>}
                     <View style={{ flexDirection: 'row', gap: 8, marginTop: 10 }}>
-                      <Button small title="Cancel" variant="secondary" style={{ flex: 1 }} onPress={() => setAdding(false)} />
-                      <Button small title="Add company" icon="plus" style={{ flex: 2 }} disabled={!name.trim()} onPress={add} />
+                      <Button small title={L('Cancel', '取消')} variant="secondary" style={{ flex: 1 }} onPress={() => setAdding(false)} />
+                      <Button small title={L('Add company', '添加公司')} icon="plus" style={{ flex: 2 }} disabled={!name.trim()} onPress={add} />
                     </View>
                   </>
                 ) : (
                   <View style={{ flexDirection: 'row', gap: 8 }}>
-                    <Button small title="Add company" icon="plus" variant="secondary" style={{ flex: 1 }} onPress={() => setAdding(true)} />
+                    <Button small title={L('Add company', '添加公司')} icon="plus" variant="secondary" style={{ flex: 1 }} onPress={() => setAdding(true)} />
                     {onManage && (
                       <Button
                         small
-                        title="Manage"
+                        title={L('Manage', '管理')}
                         icon="settings"
                         variant="secondary"
                         style={{ flex: 1 }}

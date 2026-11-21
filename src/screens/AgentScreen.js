@@ -9,13 +9,14 @@ import { Chip, ChipRow, Header, s } from '../components';
 import { colors, radius } from '../theme';
 import { CATEGORY_KEYS } from '../categories';
 import { byCategory, filterReceipts, findIssues, ISSUE_LABELS, money, rangeFor, sum } from '../utils';
+import { L, catLabel } from '../i18n';
 
-const SUGGESTIONS = [
-  'How much did I spend this month?',
-  'Find all Grab receipts',
-  'Tag the Penang hotel and flight as penang-trip',
-  'Reconcile: any duplicates or problems?',
-  'Move Mr DIY receipts to Office Supplies',
+const SUGGESTIONS = () => [
+  L('How much did I spend this month?', '这个月我花了多少钱？'),
+  L('Find all Grab receipts', '查找所有 Grab 收据'),
+  L('Tag the Penang hotel and flight as penang-trip', '把槟城的酒店和机票标记为 penang-trip'),
+  L('Reconcile: any duplicates or problems?', '核对：有没有重复或问题？'),
+  L('Move Mr DIY receipts to Office Supplies', '把 Mr DIY 的收据移到一般开支'),
 ];
 
 const brief = (r) => ({ id: r.id, merchant: r.merchant, date: r.date, total: r.total, tax: r.tax, category: r.category, tags: r.tags, status: r.status });
@@ -25,7 +26,7 @@ export default function AgentScreen({ nav }) {
   const keyboard = useKeyboardHeight(); // Android: lift content above the on-screen keyboard
   const { receipts, settings, updateMany, aiReady } = useStore();
   const [chat, setChat] = useState([
-    { role: 'assistant', text: "Hi! I can find receipts, tag and categorise them, total up spending and check your archive for duplicates or gaps. What do you need?" },
+    { role: 'assistant', text: L("Hi! I can find receipts, tag and categorise them, total up spending and check your archive for duplicates or gaps. What do you need?", '你好！我可以帮你查找收据、添加标签和分类、统计开支，并检查档案中有没有重复或缺漏。需要什么帮助？') },
   ]);
   const [apiHistory, setApiHistory] = useState([]);
   const [input, setInput] = useState('');
@@ -57,8 +58,8 @@ export default function AgentScreen({ nav }) {
       };
       work.current = list.map((r) => (ids.includes(r.id) ? { ...r, ...patch(r) } : r));
       updateMany(ids, patch);
-      const bits = [a.category && `→ ${a.category}`, a.add_tags && `+#${a.add_tags.join(' #')}`, a.remove_tags && `−#${a.remove_tags.join(' #')}`, a.mark_reviewed && 'reviewed'].filter(Boolean).join(', ');
-      return { data: { updated: ids.length }, action: `Updated ${ids.length} receipt(s): ${bits}` };
+      const bits = [a.category && `→ ${catLabel(a.category)}`, a.add_tags && `+#${a.add_tags.join(' #')}`, a.remove_tags && `−#${a.remove_tags.join(' #')}`, a.mark_reviewed && L('reviewed', '已审核')].filter(Boolean).join(L(', ', '，'));
+      return { data: { updated: ids.length }, action: L(`Updated ${ids.length} receipt(s): ${bits}`, `已更新 ${ids.length} 张收据：${bits}`) };
     }
     if (name === 'spending_summary') {
       const found = filterReceipts(list, a);
@@ -71,31 +72,35 @@ export default function AgentScreen({ nav }) {
     throw new Error('Unknown tool');
   };
 
-  // Offline fallback when no API key is set: handles a few common requests.
+  // Offline fallback when no API key is set: handles a few common requests (English or Chinese).
   const localAgent = (q) => {
     const t = q.toLowerCase();
-    const period = /last month/.test(t) ? 'last_month' : /this year|year/.test(t) ? 'this_year' : /quarter/.test(t) ? 'this_quarter' : /month/.test(t) ? 'this_month' : 'all';
+    const period = /last month|上个月|上月/.test(t) ? 'last_month' : /this year|year|今年|年/.test(t) ? 'this_year' : /quarter|季度/.test(t) ? 'this_quarter' : /month|月/.test(t) ? 'this_month' : 'all';
+    const periodName = { last_month: L('last month', '上个月'), this_year: L('this year', '今年'), this_quarter: L('this quarter', '本季度'), this_month: L('this month', '本月'), all: L('all', '全部时间') }[period];
     const r = rangeFor(period);
-    if (/duplicate|reconcile|problem|issue|missing/.test(t)) {
+    if (/duplicate|reconcile|problem|issue|missing|重复|核对|问题|缺/.test(t)) {
       const all = findIssues(receipts);
       const issues = all.filter((i) => i.type !== 'no_image');
       const noImg = all.length - issues.length;
-      const tail = noImg ? `\n\n${noImg} receipt(s) have no photo attached.` : '';
-      if (!issues.length) return `All clear — no duplicates or gaps found.${tail}`;
-      return `Found ${issues.length} item(s) to fix:\n` + issues.slice(0, 12).map((i) => `• ${ISSUE_LABELS[i.type]}: ${i.receipt.merchant}, ${i.receipt.date}, ${money(i.receipt.total, i.receipt.currency)}`).join('\n') + tail;
+      const tail = noImg ? L(`\n\n${noImg} receipt(s) have no photo attached.`, `\n\n有 ${noImg} 张收据没有附照片。`) : '';
+      if (!issues.length) return L(`All clear — no duplicates or gaps found.${tail}`, `一切正常，没有发现重复或缺漏。${tail}`);
+      return L(`Found ${issues.length} item(s) to fix:\n`, `发现 ${issues.length} 个需要处理的项目：\n`) + issues.slice(0, 12).map((i) => `• ${ISSUE_LABELS[i.type]}: ${i.receipt.merchant}, ${i.receipt.date}, ${money(i.receipt.total, i.receipt.currency)}`).join('\n') + tail;
     }
-    if (/spend|spent|total|how much/.test(t)) {
+    if (/spend|spent|total|how much|花|开支|总|多少/.test(t)) {
       const list = filterReceipts(receipts, r);
-      const cats = byCategory(list).slice(0, 5).map((c) => `• ${c.category}: ${money(c.total, settings.currency)}`).join('\n');
-      return `You spent ${money(sum(list), settings.currency)} across ${list.length} receipts (${period.replace('_', ' ')}).\n${cats}`;
+      const cats = byCategory(list).slice(0, 5).map((c) => `• ${catLabel(c.category)}: ${money(c.total, settings.currency)}`).join('\n');
+      return L(`You spent ${money(sum(list), settings.currency)} across ${list.length} receipts (${periodName}).\n${cats}`, `${periodName}你在 ${list.length} 张收据上共花了 ${money(sum(list), settings.currency)}。\n${cats}`);
     }
-    const m = t.match(/(?:find|show|search)\s+(?:all\s+)?(.+?)(?:\s+receipts?)?$/);
+    const m = t.match(/(?:find|show|search)\s+(?:all\s+)?(.+?)(?:\s+receipts?)?$/) || t.match(/(?:查找|搜索|显示|找)\s*(?:所有|全部)?\s*(.+?)\s*(?:的)?\s*(?:收据)?$/);
     if (m) {
       const list = filterReceipts(receipts, { query: m[1] });
-      if (!list.length) return `No receipts match "${m[1]}".`;
-      return `${list.length} receipt(s), ${money(sum(list), settings.currency)}:\n` + list.slice(0, 10).map((x) => `• ${x.date} ${x.merchant} ${money(x.total, x.currency)}`).join('\n');
+      if (!list.length) return L(`No receipts match "${m[1]}".`, `没有与“${m[1]}”匹配的收据。`);
+      return L(`${list.length} receipt(s), ${money(sum(list), settings.currency)}:\n`, `${list.length} 张收据，共 ${money(sum(list), settings.currency)}：\n`) + list.slice(0, 10).map((x) => `• ${x.date} ${x.merchant} ${money(x.total, x.currency)}`).join('\n');
     }
-    return 'Offline mode understands: "how much did I spend this month", "find <merchant>", and "reconcile". Add a Claude or ChatGPT API key in Settings for full tagging and categorising.';
+    return L(
+      'Offline mode understands: "how much did I spend this month", "find <merchant>", and "reconcile". Add a Claude or ChatGPT API key in Settings for full tagging and categorising.',
+      '离线模式可以理解：“这个月我花了多少钱”、“查找 <商家>”和“核对”。在设置中添加 Claude 或 ChatGPT API 密钥，即可使用完整的标记和分类功能。'
+    );
   };
 
   const send = async (text) => {
@@ -112,11 +117,11 @@ export default function AgentScreen({ nav }) {
         const history = [...apiHistory, { role: 'user', content: q }];
         const res = await agentTurn(settings, history, runTool);
         // Keep only plain-text turns as memory so trimming never splits a tool call from its result.
-        setApiHistory([...history, { role: 'assistant', content: res.text || 'Done.' }].slice(-12));
-        setChat((c) => [...c, ...res.actions.map((a) => ({ role: 'action', text: a })), { role: 'assistant', text: res.text || 'Done.' }]);
+        setApiHistory([...history, { role: 'assistant', content: res.text || L('Done.', '完成。') }].slice(-12));
+        setChat((c) => [...c, ...res.actions.map((a) => ({ role: 'action', text: a })), { role: 'assistant', text: res.text || L('Done.', '完成。') }]);
       }
     } catch (e) {
-      setChat((c) => [...c, { role: 'assistant', text: `Sorry, something went wrong: ${e.message}` }]);
+      setChat((c) => [...c, { role: 'assistant', text: L(`Sorry, something went wrong: ${e.message}`, `抱歉，出错了：${e.message}`) }]);
       setApiHistory([]);
     } finally {
       setBusy(false);
@@ -126,7 +131,7 @@ export default function AgentScreen({ nav }) {
 
   return (
     <KeyboardAvoidingView style={{ flex: 1, paddingBottom: Platform.OS === 'android' ? keyboard : 0 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={90}>
-      <Header title="Assistant" onBack={nav.back} subtitle={aiReady ? 'Find · tag · categorise · reconcile' : 'Offline mode — add API key for full power'} />
+      <Header title={L('Assistant', 'AI 助手')} onBack={nav.back} subtitle={aiReady ? L('Find · tag · categorise · reconcile', '查找 · 标记 · 分类 · 核对') : L('Offline mode — add API key for full power', '离线模式 — 添加 API 密钥以使用全部功能')} />
       <FlatList
         ref={listRef}
         data={chat}
@@ -144,15 +149,15 @@ export default function AgentScreen({ nav }) {
             </View>
           );
         }}
-        ListFooterComponent={busy ? <Text style={[s.sub, { marginLeft: 4 }]}>Thinking…</Text> : null}
+        ListFooterComponent={busy ? <Text style={[s.sub, { marginLeft: 4 }]}>{L('Thinking…', '思考中…')}</Text> : null}
       />
       {chat.length <= 2 && (
         <View style={{ paddingHorizontal: 16 }}>
-          <ChipRow>{SUGGESTIONS.map((q) => <Chip key={q} label={q} onPress={() => send(q)} />)}</ChipRow>
+          <ChipRow>{SUGGESTIONS().map((q) => <Chip key={q} label={q} onPress={() => send(q)} />)}</ChipRow>
         </View>
       )}
       <View style={{ flexDirection: 'row', padding: 12, paddingBottom: 12 + (keyboard ? 0 : bottomInset), gap: 8, borderTopWidth: 1, borderColor: colors.border, backgroundColor: colors.bg }}>
-        <TextInput value={input} onChangeText={setInput} onSubmitEditing={() => send()} placeholder="Ask about your receipts…" placeholderTextColor={colors.faint} style={[s.input, { flex: 1 }]} returnKeyType="send" />
+        <TextInput value={input} onChangeText={setInput} onSubmitEditing={() => send()} placeholder={L('Ask about your receipts…', '问问关于收据的问题…')} placeholderTextColor={colors.faint} style={[s.input, { flex: 1 }]} returnKeyType="send" />
         <Pressable onPress={() => send()} disabled={busy} style={{ backgroundColor: colors.accent, borderRadius: radius.md, paddingHorizontal: 16, justifyContent: 'center', opacity: busy ? 0.5 : 1 }}>
           <Text style={{ color: colors.accentText, fontWeight: '800', fontSize: 16 }}>↑</Text>
         </Pressable>

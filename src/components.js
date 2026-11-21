@@ -3,6 +3,7 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, 
 import { colors, radius } from './theme';
 import { Icon, isIconName } from './icons';
 import { money, prettyDate, RANGE_PRESETS } from './utils';
+import { L, catLabel } from './i18n';
 
 export function Header({ title, subtitle, onBack, right }) {
   return (
@@ -87,7 +88,7 @@ export function Field({ label, style, highlight, ...props }) {
       {!!label && (
         <Text style={[s.label, highlight && { color: DOUBT.text }]}>
           {label}
-          {highlight ? '  · please check' : ''}
+          {highlight ? L('  · please check', '  · 请检查') : ''}
         </Text>
       )}
       <TextInput placeholderTextColor={colors.faint} style={[s.input, highlight && { backgroundColor: DOUBT.bg, borderColor: DOUBT.border }]} {...props} />
@@ -114,14 +115,14 @@ export function ReceiptRow({ r, onPress, selected, onLongPress }) {
       <View style={{ flex: 1, marginLeft: 12 }}>
         <Text style={s.rowTitle} numberOfLines={1}>{r.merchant}</Text>
         <Text style={s.rowSub} numberOfLines={1}>
-          {prettyDate(r.date)} · {r.category}
+          {prettyDate(r.date)} · {catLabel(r.category)}
           {(r.tags || []).length ? ` · #${r.tags.join(' #')}` : ''}
         </Text>
       </View>
       <View style={{ alignItems: 'flex-end' }}>
         <Text style={s.rowAmt}>{money(r.total, r.currency)}</Text>
-        {r.status === 'needs_review' && <Text style={s.badge}>Review</Text>}
-        {selected && <Text style={{ color: colors.accentInk, fontSize: 12 }}>✓ selected</Text>}
+        {r.status === 'needs_review' && <Text style={s.badge}>{L('Review', '待审核')}</Text>}
+        {selected && <Text style={{ color: colors.accentInk, fontSize: 12 }}>{L('✓ selected', '✓ 已选')}</Text>}
       </View>
     </Pressable>
   );
@@ -142,7 +143,7 @@ export function RangePicker({ value, onChange }) {
   return (
     <ChipRow>
       {RANGE_PRESETS.map((p) => (
-        <Chip key={p.key} label={p.label} active={value === p.key} onPress={() => onChange(p.key)} />
+        <Chip key={p.key} label={p.label()} active={value === p.key} onPress={() => onChange(p.key)} />
       ))}
     </ChipRow>
   );

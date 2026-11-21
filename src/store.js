@@ -8,6 +8,7 @@ import { webSample, hasKey } from './ai';
 import { isWeb } from './platform';
 import * as Drive from './drive';
 import { APP_KEYS, omit, pick, useCompanies } from './companies';
+import { L } from './i18n';
 
 
 const DEFAULT_SETTINGS = {
@@ -42,9 +43,9 @@ function demoReceipts() {
     currency: 'MYR',
     category: extra.category || autoCategorize(merchant),
     tags: extra.tags || [],
-    paymentMethod: extra.paymentMethod || 'Card',
+    paymentMethod: extra.paymentMethod || L('Card', '银行卡'),
     notes: extra.notes || '',
-    lineItems: extra.lineItems || [{ description: 'Purchase', qty: 1, amount: +(total - tax).toFixed(2) }],
+    lineItems: extra.lineItems || [{ description: L('Purchase', '购买'), qty: 1, amount: +(total - tax).toFixed(2) }],
     imageUri: null,
     status: extra.status || 'processed',
     demo: true,
@@ -52,7 +53,7 @@ function demoReceipts() {
   });
   return [
     mk('Starbucks Pavilion KL', 1, 32.4, 1.83, { tags: ['client'], lineItems: [{ description: 'Caffe Latte (G)', qty: 2, amount: 30.57 }] }),
-    mk('Petronas Klang', 3, 120, 0, { paymentMethod: 'Debit card' }),
+    mk('Petronas Klang', 3, 120, 0, { paymentMethod: L('Debit card', '借记卡') }),
     mk('Grab', 4, 18.5, 0, { tags: ['client'] }),
     mk('Popular Bookstore', 6, 56.9, 3.22, { lineItems: [{ description: 'A4 paper 500s', qty: 2, amount: 31.8 }, { description: 'Pens', qty: 1, amount: 21.88 }] }),
     mk('Adobe Systems', 9, 105.0, 5.94, { tags: ['subscription'] }),
@@ -166,7 +167,7 @@ export function StoreProvider({ children, dataKey = 'scantrack:v1', withSamples 
       setDriveStatus({ syncing: false, lastSync: Date.now(), error: null });
       ok = true;
     } catch (e) {
-      setDriveStatus((d) => ({ ...d, syncing: false, error: e.message || 'Google Drive sync failed.' }));
+      setDriveStatus((d) => ({ ...d, syncing: false, error: e.message || L('Google Drive sync failed.', 'Google 云端硬盘同步失败。') }));
     } finally {
       syncing.current = false;
     }
@@ -274,9 +275,9 @@ export function StoreProvider({ children, dataKey = 'scantrack:v1', withSamples 
   // Add a category of the user's own. Returns its name, or throws if the name is empty or taken.
   const addCategory = useCallback(({ name, icon, color }) => {
     const key = String(name || '').replace(/\s+/g, ' ').trim();
-    if (!key) throw new Error('Type a name for the category.');
-    if (key.length > 30) throw new Error('Keep the name to 30 characters or fewer.');
-    if (CATEGORY_KEYS.some((k) => k.toLowerCase() === key.toLowerCase())) throw new Error(`"${key}" already exists.`);
+    if (!key) throw new Error(L('Type a name for the category.', '请输入类别名称。'));
+    if (key.length > 30) throw new Error(L('Keep the name to 30 characters or fewer.', '名称不能超过 30 个字符。'));
+    if (CATEGORY_KEYS.some((k) => k.toLowerCase() === key.toLowerCase())) throw new Error(L(`"${key}" already exists.`, `“${key}”已存在。`));
     const next = [...(latest.current.settings.customCategories || []), { key, icon, color }];
     setCustomCategories(next);
     setSettings((st) => ({ ...st, customCategories: next }));

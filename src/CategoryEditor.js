@@ -6,6 +6,7 @@ import { Button, s } from './components';
 import { Icon } from './icons';
 import { colors, radius } from './theme';
 import { CUSTOM_COLORS, CUSTOM_ICONS } from './categories';
+import { L } from './i18n';
 
 export default function CategoryEditor({ visible, onClose, onCreated }) {
   const { addCategory } = useStore();
@@ -38,7 +39,7 @@ export default function CategoryEditor({ visible, onClose, onCreated }) {
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
         <Pressable style={{ flex: 1, backgroundColor: '#0008', justifyContent: 'center', padding: 20 }} onPress={onClose}>
           <Pressable style={{ backgroundColor: colors.surface, borderRadius: radius.lg, padding: 16 }} onPress={() => {}}>
-            <Text style={s.h2}>New category</Text>
+            <Text style={s.h2}>{L('New category', '新类别')}</Text>
 
             {/* preview */}
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 14, marginBottom: 12 }}>
@@ -51,7 +52,7 @@ export default function CategoryEditor({ visible, onClose, onCreated }) {
                   setName(v);
                   setError('');
                 }}
-                placeholder="Category name, e.g. Medical"
+                placeholder={L('Category name, e.g. Medical', '类别名称，例如：医疗')}
                 placeholderTextColor={colors.faint}
                 maxLength={30}
                 autoFocus
@@ -61,7 +62,7 @@ export default function CategoryEditor({ visible, onClose, onCreated }) {
             </View>
             {!!error && <Text style={{ color: colors.danger, marginBottom: 8 }}>{error}</Text>}
 
-            <Text style={s.label}>Icon</Text>
+            <Text style={s.label}>{L('Icon', '图标')}</Text>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
               {CUSTOM_ICONS.map((n) => (
                 <Pressable
@@ -74,7 +75,7 @@ export default function CategoryEditor({ visible, onClose, onCreated }) {
               ))}
             </View>
 
-            <Text style={s.label}>Colour</Text>
+            <Text style={s.label}>{L('Colour', '颜色')}</Text>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 16 }}>
               {CUSTOM_COLORS.map((c) => (
                 <Pressable
@@ -88,8 +89,8 @@ export default function CategoryEditor({ visible, onClose, onCreated }) {
             </View>
 
             <View style={{ flexDirection: 'row', gap: 8 }}>
-              <Button small title="Cancel" variant="secondary" style={{ flex: 1 }} onPress={onClose} />
-              <Button small title="Add category" icon="plus" style={{ flex: 2 }} disabled={!name.trim()} onPress={save} />
+              <Button small title={L('Cancel', '取消')} variant="secondary" style={{ flex: 1 }} onPress={onClose} />
+              <Button small title={L('Add category', '添加类别')} icon="plus" style={{ flex: 2 }} disabled={!name.trim()} onPress={save} />
             </View>
           </Pressable>
         </Pressable>

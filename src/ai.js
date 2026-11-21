@@ -5,6 +5,7 @@
 import { CATEGORY_KEYS, categoryGuide, normalizeCategory } from './categories';
 import { today } from './utils';
 import { isWeb, capability, base64ToBlob } from './platform';
+import { L, catLabel, isZh } from './i18n';
 
 // In the web build (claude.ai artifact) Claude is reached through the viewer's own
 // account via the `sample` capability, so no API key is needed there.
@@ -14,11 +15,11 @@ export async function webSample() {
 
 function sampleError(e) {
   const c = e?.code;
-  if (c === 'not_granted') return new Error('Claude access was not allowed for this page.');
-  if (c === 'rate_limited') return new Error('Too many requests right now. Try again in a moment.');
-  if (c === 'images_unavailable') return new Error('This view cannot send images to Claude.');
-  if (c === 'invalid_json') return new Error('Could not read the receipt. Try a clearer photo.');
-  return new Error(e?.message || 'Claude could not answer. Try again.');
+  if (c === 'not_granted') return new Error(L('Claude access was not allowed for this page.', '此页面未获准使用 Claude。'));
+  if (c === 'rate_limited') return new Error(L('Too many requests right now. Try again in a moment.', '当前请求过多，请稍后再试。'));
+  if (c === 'images_unavailable') return new Error(L('This view cannot send images to Claude.', '此视图无法向 Claude 发送图片。'));
+  if (c === 'invalid_json') return new Error(L('Could not read the receipt. Try a clearer photo.', '无法读取收据，请拍一张更清晰的照片。'));
+  return new Error(e?.message || L('Claude could not answer. Try again.', 'Claude 无法回答，请重试。'));
 }
 
 const API_URL = 'https://api.anthropic.com/v1/messages';
@@ -39,7 +40,7 @@ async function callClaude(settings, body) {
     body: JSON.stringify({ model: settings.model || 'claude-sonnet-5-5', max_tokens: 2048, ...body }),
   });
   const json = await res.json();
-  if (!res.ok) throw new Error(json?.error?.message || `API error ${res.status}`);
+  if (!res.ok) throw new Error(json?.error?.message || L(`API error ${res.status}`, `API 错误 ${res.status}`));
   return json;
 }
 
@@ -56,7 +57,7 @@ async function callOpenAI(settings, body) {
     body: JSON.stringify({ model: settings.openaiModel || DEFAULT_OPENAI_MODEL, max_completion_tokens: 4096, ...body }),
   });
   const json = await res.json();
-  if (!res.ok) throw new Error(json?.error?.message || `OpenAI error ${res.status}`);
+  if (!res.ok) throw new Error(json?.error?.message || L(`OpenAI error ${res.status}`, `OpenAI 错误 ${res.status}`));
   return json;
 }
 
@@ -75,7 +76,7 @@ export async function testAI(settings) {
 
 function parseJSON(text) {
   const m = text.match(/\{[\s\S]*\}/);
-  if (!m) throw new Error('Could not read the receipt. Try a clearer photo.');
+  if (!m) throw new Error(L('Could not read the receipt. Try a clearer photo.', '无法读取收据，请拍一张更清晰的照片。'));
   return JSON.parse(m[0]);
 }
 
@@ -142,7 +143,7 @@ ${categoryGuide()}`;
     amount: Number(i.amount) || 0,
   }));
   return {
-    merchant: d.merchant || 'Unknown merchant',
+    merchant: d.merchant || L('Unknown merchant', '未知商家'),
     date: /^\d{4}-\d{2}-\d{2}$/.test(d.date || '') ? d.date : today(),
     currency: d.currency || settings.currency,
     subtotal: Number(d.subtotal) || 0,
@@ -245,7 +246,7 @@ async function agentTurnWeb(sample, system, history, runTool) {
     return { text: text.trim(), actions };
   } catch (e) {
     if (e?.code === 'tools_unavailable') {
-      throw new Error('This view cannot run the assistant tools.');
+      throw new Error(L('This view cannot run the assistant tools.', '此视图无法运行助手工具。'));
     }
     throw sampleError(e);
   }
@@ -272,13 +273,21 @@ async function agentTurnOpenAI(settings, system, history, runTool) {
       messages.push({ role: 'tool', tool_call_id: c.id, content: JSON.stringify(out?.data ?? out) });
     }
   }
-  return { text: 'I ran out of steps on that one — try a narrower question.', actions };
+  return { text: L('I ran out of steps on that one — try a narrower question.', '这个问题步骤太多了，请问得更具体一些。'), actions };
 }
 
 function agentSystem(settings) {
   return `You are the ScanTrack assistant inside a receipt & expense app. Today is ${today()}. Default currency ${settings.currency}.
 Use the tools to find, tag, categorise and reconcile receipts. Never invent receipts or numbers; only report what tools return.
-When you change data, say exactly what you changed. Keep replies short and mobile-friendly (plain text, short lists).`;
+When you change data, say exactly what you changed. Keep replies short and mobile-friendly (plain text, short lists).${languageNote()}`;
+}
+
+// In Chinese mode the assistant answers in Simplified Chinese. Tool inputs keep the English
+// category keys; this maps them to the names the user sees on screen.
+function languageNote() {
+  if (!isZh()) return '';
+  const names = CATEGORY_KEYS.filter((k) => catLabel(k) !== k).map((k) => `${k} = ${catLabel(k)}`).join('; ');
+  return `\nAlways reply in Simplified Chinese (简体中文). Keep using the English category keys in tool calls, but when you name a category to the user, use its Chinese name: ${names}.`;
 }
 
 async function agentTurnAPI(settings, system, messages, runTool) {
@@ -303,5 +312,5 @@ async function agentTurnAPI(settings, system, messages, runTool) {
     });
     messages = [...messages, { role: 'user', content: results }];
   }
-  return { text: 'I ran out of steps on that one — try a narrower question.', messages, actions };
+  return { text: L('I ran out of steps on that one — try a narrower question.', '这个问题步骤太多了，请问得更具体一些。'), messages, actions };
 }

@@ -15,6 +15,7 @@ import { Icon } from '../icons';
 import { showToast } from '../Toast';
 import { showReceiptResult } from '../ReceiptResult';
 import { findDuplicate, money, prettyDate } from '../utils';
+import { L, catLabel } from '../i18n';
 
 const num = (v) => {
   const n = parseFloat(String(v).replace(/,/g, ''));
@@ -81,9 +82,9 @@ export default function ReceiptEditScreen({ nav, params }) {
       Animated.timing(pan, { toValue: dir === 'next' ? -screenW : screenW, duration: 160, useNativeDriver: true }).start(() => goTo(id, dir));
     if (JSON.stringify(live.current.f) !== initialForm.current) {
       Animated.spring(pan, { toValue: 0, useNativeDriver: true }).start();
-      return showAlert('Unsaved changes', 'Move to the other receipt without saving your changes here?', [
-        { text: 'Stay', style: 'cancel' },
-        { text: 'Discard changes', style: 'destructive', onPress: leave },
+      return showAlert(L('Unsaved changes', '有未保存的更改'), L('Move to the other receipt without saving your changes here?', '不保存这里的更改就切换到另一张收据吗？'), [
+        { text: L('Stay', '留下'), style: 'cancel' },
+        { text: L('Discard changes', '放弃更改'), style: 'destructive', onPress: leave },
       ]);
     }
     leave();
@@ -138,15 +139,15 @@ export default function ReceiptEditScreen({ nav, params }) {
   if (!existing && !params.draft) {
     return (
       <View style={{ flex: 1 }}>
-        <Header title="Receipt" onBack={nav.back} />
-        <Text style={[s.sub, { padding: 16 }]}>This receipt was deleted.</Text>
+        <Header title={L('Receipt', '收据')} onBack={nav.back} />
+        <Text style={[s.sub, { padding: 16 }]}>{L('This receipt was deleted.', '此收据已被删除。')}</Text>
       </View>
     );
   }
 
   const save = () => {
-    if (!f.merchant.trim()) return showAlert('Merchant missing', 'Add the merchant name.');
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(f.date)) return showAlert('Check the date', 'Use the format YYYY-MM-DD.');
+    if (!f.merchant.trim()) return showAlert(L('Merchant missing', '缺少商家'), L('Add the merchant name.', '请填写商家名称。'));
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(f.date)) return showAlert(L('Check the date', '请检查日期'), L('Use the format YYYY-MM-DD.', '请使用 YYYY-MM-DD 格式（年-月-日）。'));
     const total = num(f.total);
     const tax = num(f.tax);
     const rec = {
@@ -174,9 +175,9 @@ export default function ReceiptEditScreen({ nav, params }) {
         .then(() => {
           if (!isNew) detachReceipt(existing.id);
           nav.back();
-          showToast({ title: isNew ? `Saved to ${target.name}` : `Moved to ${target.name}`, text: `${full.merchant} · ${money(full.total, full.currency)} · ${full.category}` });
+          showToast({ title: isNew ? L(`Saved to ${target.name}`, `已保存到 ${target.name}`) : L(`Moved to ${target.name}`, `已移到 ${target.name}`), text: `${full.merchant} · ${money(full.total, full.currency)} · ${catLabel(full.category)}` });
         })
-        .catch((e) => showAlert('Could not save', e.message));
+        .catch((e) => showAlert(L('Could not save', '无法保存'), e.message));
       return;
     }
     const commit = (r) => {
@@ -189,22 +190,25 @@ export default function ReceiptEditScreen({ nav, params }) {
     const twin = findDuplicate(receipts, { ...rec, confirmedUnique: existing?.confirmedUnique }, existing?.id);
     if (!twin) return commit(rec);
     showAlert(
-      'Possible duplicate',
-      `You already have ${twin.merchant} on ${prettyDate(twin.date)} for ${money(twin.total, twin.currency)}.\n\nIs this a different purchase?`,
+      L('Possible duplicate', '可能重复'),
+      L(
+        `You already have ${twin.merchant} on ${prettyDate(twin.date)} for ${money(twin.total, twin.currency)}.\n\nIs this a different purchase?`,
+        `你已经有一张 ${prettyDate(twin.date)} 在 ${twin.merchant} 消费 ${money(twin.total, twin.currency)} 的收据。\n\n这是另一笔消费吗？`
+      ),
       [
         isNew
-          ? { text: "Don't save", style: 'destructive', onPress: () => nav.back() }
-          : { text: 'Delete this copy', style: 'destructive', onPress: () => { deleteReceipt(existing.id); nav.back(); } },
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Not a duplicate', onPress: () => commit({ ...rec, confirmedUnique: true }) },
+          ? { text: L("Don't save", '不保存'), style: 'destructive', onPress: () => nav.back() }
+          : { text: L('Delete this copy', '删除这份'), style: 'destructive', onPress: () => { deleteReceipt(existing.id); nav.back(); } },
+        { text: L('Cancel', '取消'), style: 'cancel' },
+        { text: L('Not a duplicate', '不是重复'), onPress: () => commit({ ...rec, confirmedUnique: true }) },
       ]
     );
   };
 
   const remove = () =>
-    showAlert('Delete receipt', 'Delete this receipt and its image?', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: () => { deleteReceipt(existing.id); nav.back(); } },
+    showAlert(L('Delete receipt', '删除收据'), L('Delete this receipt and its image?', '删除这张收据及其图片？'), [
+      { text: L('Cancel', '取消'), style: 'cancel' },
+      { text: L('Delete', '删除'), style: 'destructive', onPress: () => { deleteReceipt(existing.id); nav.back(); } },
     ]);
 
   const addTag = () => {
@@ -217,16 +221,16 @@ export default function ReceiptEditScreen({ nav, params }) {
 
   return (
     <KeyboardAvoidingView style={{ flex: 1, overflow: 'hidden' }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <Header title={isNew ? 'Review receipt' : 'Receipt'} onBack={nav.back} right={!isNew && <Text style={{ color: colors.danger, fontWeight: '700' }} onPress={remove}>Delete</Text>} />
+      <Header title={isNew ? L('Review receipt', '审核收据') : L('Receipt', '收据')} onBack={nav.back} right={!isNew && <Text style={{ color: colors.danger, fontWeight: '700' }} onPress={remove}>{L('Delete', '删除')}</Text>} />
       {pos >= 0 && order.length > 1 && (
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, marginTop: -6, marginBottom: 8 }}>
           <Pressable hitSlop={10} disabled={!prevId} onPress={() => tryGo('prev')} style={{ flexDirection: 'row', alignItems: 'center', opacity: prevId ? 1 : 0.3 }}>
             <Icon name="chevron-left" size={18} color={colors.accentInk} />
-            <Text style={{ color: colors.accentInk, fontWeight: '700' }}>Previous</Text>
+            <Text style={{ color: colors.accentInk, fontWeight: '700' }}>{L('Previous', '上一张')}</Text>
           </Pressable>
-          <Text style={s.sub}>{pos + 1} of {order.length} · swipe to browse</Text>
+          <Text style={s.sub}>{L(`${pos + 1} of ${order.length} · swipe to browse`, `第 ${pos + 1} / ${order.length} 张 · 左右滑动浏览`)}</Text>
           <Pressable hitSlop={10} disabled={!nextId} onPress={() => tryGo('next')} style={{ flexDirection: 'row', alignItems: 'center', opacity: nextId ? 1 : 0.3 }}>
-            <Text style={{ color: colors.accentInk, fontWeight: '700' }}>Next</Text>
+            <Text style={{ color: colors.accentInk, fontWeight: '700' }}>{L('Next', '下一张')}</Text>
             <Icon name="chevron-right" size={18} color={colors.accentInk} />
           </Pressable>
         </View>
@@ -239,7 +243,7 @@ export default function ReceiptEditScreen({ nav, params }) {
           <Image source={{ uri: src.imageUri }} style={{ width: '100%', height: '100%' }} resizeMode="contain" />
           <View style={{ position: 'absolute', right: 10, bottom: 10, flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: 999, paddingVertical: 5, paddingHorizontal: 10 }}>
             <Icon name="search" size={14} color="#fff" />
-            <Text style={{ color: '#fff', fontSize: 12, fontWeight: '700' }}>Tap to zoom</Text>
+            <Text style={{ color: '#fff', fontSize: 12, fontWeight: '700' }}>{L('Tap to zoom', '点击放大')}</Text>
           </View>
         </Pressable>
         </Animated.View>
@@ -261,22 +265,22 @@ export default function ReceiptEditScreen({ nav, params }) {
           <View style={{ flexDirection: 'row', gap: 10, backgroundColor: DOUBT.bg, borderWidth: 1, borderColor: DOUBT.border, borderRadius: 12, padding: 12, marginBottom: 4 }}>
             <Icon name="alert" size={18} color={DOUBT.text} />
             <Text style={{ color: DOUBT.text, flex: 1 }}>
-              <Text style={{ fontWeight: '800' }}>Check {doubt.size} field{doubt.size > 1 ? 's' : ''} in yellow. </Text>
-              The AI wasn't sure about {doubt.size > 1 ? 'them' : 'it'}. Compare with the photo above, then save.
+              <Text style={{ fontWeight: '800' }}>{L(`Check ${doubt.size} field${doubt.size > 1 ? 's' : ''} in yellow. `, `请检查 ${doubt.size} 个黄色栏位。`)}</Text>
+              {L(`The AI wasn't sure about ${doubt.size > 1 ? 'them' : 'it'}. Compare with the photo above, then save.`, 'AI 对这些内容不太确定。请对照上方照片核对后再保存。')}
             </Text>
           </View>
         )}
 
         {f.status === 'needs_review' && (
           <Card style={{ marginTop: 12, borderColor: colors.warning }}>
-            <Text style={[s.body, { fontWeight: '700' }]}>Please check these details</Text>
-            <Text style={[s.sub, { marginTop: 4 }]}>Some fields were unclear or missing. Saving marks it reviewed.</Text>
+            <Text style={[s.body, { fontWeight: '700' }]}>{L('Please check these details', '请检查这些详情')}</Text>
+            <Text style={[s.sub, { marginTop: 4 }]}>{L('Some fields were unclear or missing. Saving marks it reviewed.', '有些栏位不清楚或缺失。保存后会标记为已审核。')}</Text>
           </Card>
         )}
         {dup && (
           <Card style={{ marginTop: 12, borderColor: colors.danger }}>
-            <Text style={[s.body, { fontWeight: '700' }]}>Possible duplicate</Text>
-            <Text style={[s.sub, { marginTop: 4 }]}>A receipt from {dup.merchant} on {prettyDate(dup.date)} for {money(dup.total, dup.currency)} already exists. You'll be asked to confirm when you save.</Text>
+            <Text style={[s.body, { fontWeight: '700' }]}>{L('Possible duplicate', '可能重复')}</Text>
+            <Text style={[s.sub, { marginTop: 4 }]}>{L(`A receipt from ${dup.merchant} on ${prettyDate(dup.date)} for ${money(dup.total, dup.currency)} already exists. You'll be asked to confirm when you save.`, `已经有一张 ${prettyDate(dup.date)} 在 ${dup.merchant} 消费 ${money(dup.total, dup.currency)} 的收据。保存时会请你确认。`)}</Text>
           </Card>
         )}
 
@@ -287,16 +291,16 @@ export default function ReceiptEditScreen({ nav, params }) {
           >
             <CompanyDot color={target?.color} size={12} />
             <View style={{ flex: 1 }}>
-              <Text style={s.sub}>{isNew ? 'Save to company' : target?.id !== company?.id ? 'Will move to company' : 'Company'}</Text>
+              <Text style={s.sub}>{isNew ? L('Save to company', '保存到公司') : target?.id !== company?.id ? L('Will move to company', '将移到公司') : L('Company', '公司')}</Text>
               <Text style={[s.body, { fontWeight: '700' }]} numberOfLines={1}>{target?.name}</Text>
             </View>
-            <Text style={{ color: colors.accentInk, fontWeight: '700' }}>Change</Text>
+            <Text style={{ color: colors.accentInk, fontWeight: '700' }}>{L('Change', '更改')}</Text>
           </Pressable>
         )}
         <Modal visible={companyPick} transparent animationType="fade" onRequestClose={() => setCompanyPick(false)}>
           <Pressable style={{ flex: 1, backgroundColor: '#0008', justifyContent: 'center', padding: 24 }} onPress={() => setCompanyPick(false)}>
             <Pressable style={{ backgroundColor: colors.surface, borderRadius: 18, paddingVertical: 8 }} onPress={() => {}}>
-              <Text style={[s.h2, { paddingHorizontal: 16, paddingVertical: 10 }]}>{isNew ? 'Save to company' : 'Move to company'}</Text>
+              <Text style={[s.h2, { paddingHorizontal: 16, paddingVertical: 10 }]}>{isNew ? L('Save to company', '保存到公司') : L('Move to company', '移到公司')}</Text>
               {companies.map((c) => (
                 <Pressable
                   key={c.id}
@@ -304,7 +308,7 @@ export default function ReceiptEditScreen({ nav, params }) {
                   style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 13, paddingHorizontal: 16, backgroundColor: c.id === targetId ? colors.surface2 : 'transparent' }}
                 >
                   <CompanyDot color={c.color} size={12} />
-                  <Text style={[s.body, { flex: 1 }]} numberOfLines={1}>{c.name}{c.id === company?.id ? '  (current)' : ''}</Text>
+                  <Text style={[s.body, { flex: 1 }]} numberOfLines={1}>{c.name}{c.id === company?.id ? L('  (current)', '（当前）') : ''}</Text>
                   {c.id === targetId && <Icon name="check" size={18} color={colors.accentInk} />}
                 </Pressable>
               ))}
@@ -312,52 +316,52 @@ export default function ReceiptEditScreen({ nav, params }) {
           </Pressable>
         </Modal>
 
-        <SectionTitle>Details</SectionTitle>
-        <Field label="Merchant" highlight={doubt.has('merchant')} value={f.merchant} onChangeText={(v) => { set('merchant')(v); if (isNew && f.category === 'Others') set('category')(autoCategorize(v)); }} placeholder="e.g. Petronas Klang" />
+        <SectionTitle>{L('Details', '详情')}</SectionTitle>
+        <Field label={L('Merchant', '商家')} highlight={doubt.has('merchant')} value={f.merchant} onChangeText={(v) => { set('merchant')(v); if (isNew && f.category === 'Others') set('category')(autoCategorize(v)); }} placeholder={L('e.g. Petronas Klang', '例如：Petronas Klang')} />
         <View style={{ flexDirection: 'row', gap: 10 }}>
-          <Field style={{ flex: 1 }} label="Date (YYYY-MM-DD)" highlight={doubt.has('date')} value={f.date} onChangeText={set('date')} placeholder="2026-11-05" />
-          <Field style={{ width: 90 }} label="Currency" value={f.currency} onChangeText={(v) => set('currency')(v.toUpperCase())} autoCapitalize="characters" maxLength={3} />
+          <Field style={{ flex: 1 }} label={L('Date (YYYY-MM-DD)', '日期（年-月-日）')} highlight={doubt.has('date')} value={f.date} onChangeText={set('date')} placeholder="2026-11-05" />
+          <Field style={{ width: 90 }} label={L('Currency', '货币')} value={f.currency} onChangeText={(v) => set('currency')(v.toUpperCase())} autoCapitalize="characters" maxLength={3} />
         </View>
         <View style={{ flexDirection: 'row', gap: 10 }}>
-          <Field style={{ flex: 1 }} label="Total" highlight={doubt.has('total')} value={f.total} onChangeText={set('total')} keyboardType="decimal-pad" placeholder="0.00" />
-          <Field style={{ flex: 1 }} label="Tax (SST)" highlight={doubt.has('tax')} value={f.tax} onChangeText={set('tax')} keyboardType="decimal-pad" placeholder="0.00" />
+          <Field style={{ flex: 1 }} label={L('Total', '总额')} highlight={doubt.has('total')} value={f.total} onChangeText={set('total')} keyboardType="decimal-pad" placeholder="0.00" />
+          <Field style={{ flex: 1 }} label={L('Tax (SST)', '税款 (SST)')} highlight={doubt.has('tax')} value={f.tax} onChangeText={set('tax')} keyboardType="decimal-pad" placeholder="0.00" />
         </View>
-        <Field label="Payment method" highlight={doubt.has('paymentMethod')} value={f.paymentMethod} onChangeText={set('paymentMethod')} placeholder="Card, Cash, TNG eWallet…" />
+        <Field label={L('Payment method', '付款方式')} highlight={doubt.has('paymentMethod')} value={f.paymentMethod} onChangeText={set('paymentMethod')} placeholder={L('Card, Cash, TNG eWallet…', '银行卡、现金、TNG 电子钱包…')} />
 
-        <SectionTitle>{doubt.has('category') ? 'Category · please check' : 'Category'}</SectionTitle>
+        <SectionTitle>{doubt.has('category') ? L('Category · please check', '类别 · 请检查') : L('Category', '类别')}</SectionTitle>
         <View style={[{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }, doubt.has('category') && { backgroundColor: DOUBT.bg, borderWidth: 1, borderColor: DOUBT.border, borderRadius: 12, padding: 8 }]}>
-          {CATEGORIES.map((c) => <Chip key={c.key} icon={c.icon} iconColor={c.color} label={c.key} active={f.category === c.key} onPress={() => set('category')(c.key)} color={c.color} />)}
-          <Chip icon="plus" label="New category" onPress={() => setCatEditor(true)} />
+          {CATEGORIES.map((c) => <Chip key={c.key} icon={c.icon} iconColor={c.color} label={catLabel(c.key)} active={f.category === c.key} onPress={() => set('category')(c.key)} color={c.color} />)}
+          <Chip icon="plus" label={L('New category', '新类别')} onPress={() => setCatEditor(true)} />
         </View>
 
-        <SectionTitle>Tags</SectionTitle>
+        <SectionTitle>{L('Tags', '标签')}</SectionTitle>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 8 }}>
           {f.tags.map((t) => <Chip key={t} label={`#${t}  ✕`} active color={colors.info} onPress={() => set('tags')(f.tags.filter((x) => x !== t))} />)}
         </View>
         <View style={{ flexDirection: 'row', gap: 8 }}>
-          <TextInput value={tagInput} onChangeText={setTagInput} onSubmitEditing={addTag} placeholder="Add tag (client, project, trip)" placeholderTextColor={colors.faint} style={[s.input, { flex: 1 }]} autoCapitalize="none" />
-          <Button title="Add" small variant="secondary" onPress={addTag} />
+          <TextInput value={tagInput} onChangeText={setTagInput} onSubmitEditing={addTag} placeholder={L('Add tag (client, project, trip)', '添加标签（客户、项目、出差）')} placeholderTextColor={colors.faint} style={[s.input, { flex: 1 }]} autoCapitalize="none" />
+          <Button title={L('Add', '添加')} small variant="secondary" onPress={addTag} />
         </View>
 
-        <SectionTitle right={<Text style={[s.sub, doubt.has('lineItems') && { color: DOUBT.text, fontWeight: '700' }]}>Items sum {money(itemsTotal, f.currency)}</Text>}>
-          {doubt.has('lineItems') ? "Line items · don't add up, please check" : 'Line items'}
+        <SectionTitle right={<Text style={[s.sub, doubt.has('lineItems') && { color: DOUBT.text, fontWeight: '700' }]}>{L('Items sum', '项目合计')} {money(itemsTotal, f.currency)}</Text>}>
+          {doubt.has('lineItems') ? L("Line items · don't add up, please check", '明细项目 · 金额对不上，请检查') : L('Line items', '明细项目')}
         </SectionTitle>
         <View style={doubt.has('lineItems') ? { backgroundColor: DOUBT.bg, borderWidth: 1, borderColor: DOUBT.border, borderRadius: 12, padding: 8, paddingBottom: 0, marginBottom: 8 } : null}>
         {f.lineItems.map((it, i) => (
           <View key={i} style={{ flexDirection: 'row', gap: 6, marginBottom: 8, alignItems: 'center' }}>
-            <TextInput value={it.description} onChangeText={(v) => setItem(i, 'description', v)} placeholder="Item" placeholderTextColor={colors.faint} style={[s.input, { flex: 1, paddingVertical: 10 }]} />
+            <TextInput value={it.description} onChangeText={(v) => setItem(i, 'description', v)} placeholder={L('Item', '项目')} placeholderTextColor={colors.faint} style={[s.input, { flex: 1, paddingVertical: 10 }]} />
             <TextInput value={it.qty} onChangeText={(v) => setItem(i, 'qty', v)} keyboardType="decimal-pad" style={[s.input, { width: 48, paddingVertical: 10, textAlign: 'center' }]} />
             <TextInput value={it.amount} onChangeText={(v) => setItem(i, 'amount', v)} keyboardType="decimal-pad" placeholder="0.00" placeholderTextColor={colors.faint} style={[s.input, { width: 84, paddingVertical: 10, textAlign: 'right' }]} />
             <Text style={{ color: colors.danger, fontSize: 18, paddingHorizontal: 4 }} onPress={() => set('lineItems')(f.lineItems.filter((_, idx) => idx !== i))}>✕</Text>
           </View>
         ))}
         </View>
-        <Button title="Add line item" icon="plus" variant="ghost" small onPress={() => set('lineItems')([...f.lineItems, { description: '', qty: '1', amount: '' }])} />
+        <Button title={L('Add line item', '添加明细项目')} icon="plus" variant="ghost" small onPress={() => set('lineItems')([...f.lineItems, { description: '', qty: '1', amount: '' }])} />
 
-        <SectionTitle>Notes</SectionTitle>
-        <TextInput value={f.notes} onChangeText={set('notes')} placeholder="Business purpose, attendees…" placeholderTextColor={colors.faint} style={[s.input, { minHeight: 70, textAlignVertical: 'top' }]} multiline />
+        <SectionTitle>{L('Notes', '备注')}</SectionTitle>
+        <TextInput value={f.notes} onChangeText={set('notes')} placeholder={L('Business purpose, attendees…', '业务用途、参与人员…')} placeholderTextColor={colors.faint} style={[s.input, { minHeight: 70, textAlignVertical: 'top' }]} multiline />
 
-        <Button title={isNew ? 'Save receipt' : f.status === 'needs_review' ? 'Save & mark reviewed' : 'Save changes'} onPress={save} style={{ marginTop: 20 }} />
+        <Button title={isNew ? L('Save receipt', '保存收据') : f.status === 'needs_review' ? L('Save & mark reviewed', '保存并标记为已审核') : L('Save changes', '保存更改')} onPress={save} style={{ marginTop: 20 }} />
       </ScrollView>
 
       </View>
@@ -367,7 +371,7 @@ export default function ReceiptEditScreen({ nav, params }) {
       <Modal visible={zoom} transparent onRequestClose={() => setZoom(false)}>
         <Pressable style={{ flex: 1, backgroundColor: '#000', justifyContent: 'center' }} onPress={() => setZoom(false)}>
           {src.imageUri && <Image source={{ uri: src.imageUri }} style={{ width: '100%', height: '85%' }} resizeMode="contain" />}
-          <Text style={{ color: '#fff', textAlign: 'center', marginTop: 12 }}>Tap to close</Text>
+          <Text style={{ color: '#fff', textAlign: 'center', marginTop: 12 }}>{L('Tap to close', '点击关闭')}</Text>
         </Pressable>
       </Modal>
     </KeyboardAvoidingView>
