@@ -48,15 +48,16 @@ export const periodLabel = (p) => (p.mode === 'year' ? `${p.year}` : monthsText(
 const shortLabel = (p) => monthsText(p, MONTHS);
 
 // "Nov – Dec 2026 ▾" (opens a Jan–Dec grid: tap months to pick one or more, then Apply) and "This year".
-export function PeriodPicker({ period, onChange }) {
+// With allowAll, period can be null (= every date) and an "All" chip is shown first.
+export function PeriodPicker({ period, onChange, allowAll }) {
   const now = new Date();
   const [open, setOpen] = useState(false);
-  const [year, setYear] = useState(period.year);
+  const [year, setYear] = useState(period ? period.year : now.getFullYear());
   const [picked, setPicked] = useState([]);
 
   const openPicker = () => {
-    setYear(period.year);
-    setPicked(period.mode === 'month' ? monthsOf(period) : []);
+    setYear(period ? period.year : now.getFullYear());
+    setPicked(period && period.mode === 'month' ? monthsOf(period) : []);
     setOpen(true);
   };
   const changeYear = (d) => {
@@ -73,8 +74,14 @@ export function PeriodPicker({ period, onChange }) {
   return (
     <>
       <View style={{ flexDirection: 'row', gap: 8, paddingVertical: 4 }}>
-        <Chip icon="calendar" label={`${period.mode === 'month' ? shortLabel(period) : `${MONTHS[now.getMonth()]} ${now.getFullYear()}`}  ▾`} active={period.mode === 'month'} onPress={openPicker} />
-        <Chip label="This year" active={period.mode === 'year'} onPress={() => onChange({ mode: 'year', year: now.getFullYear(), months: monthsOf(period) })} />
+        {allowAll && <Chip label="All months" active={!period} onPress={() => onChange(null)} />}
+        <Chip
+          icon="calendar"
+          label={`${period && period.mode === 'month' ? shortLabel(period) : allowAll ? 'Pick month' : `${MONTHS[now.getMonth()]} ${now.getFullYear()}`}  ▾`}
+          active={!!period && period.mode === 'month'}
+          onPress={openPicker}
+        />
+        <Chip label="This year" active={!!period && period.mode === 'year'} onPress={() => onChange({ mode: 'year', year: now.getFullYear(), months: period ? monthsOf(period) : [now.getMonth()] })} />
       </View>
 
       <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>

@@ -3,6 +3,7 @@ import { showAlert } from '../platform';
 import { Icon } from '../icons';
 import CompanySwitcher from '../CompanySwitcher';
 import React, { useMemo, useState } from 'react';
+import { PeriodPicker, inPeriod } from '../period';
 import { Alert, FlatList, Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { useStore } from '../store';
 import { Button, Chip, ChipRow, Empty, Header, ReceiptRow, s } from '../components';
@@ -25,6 +26,7 @@ export default function ReceiptsScreen({ nav }) {
   const [sortOpen, setSortOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState(null);
+  const [period, setPeriod] = useState(null); // null = all months
   const [tag, setTag] = useState(null);
   const [onlyReview, setOnlyReview] = useState(false);
   const [catOpen, setCatOpen] = useState(false);
@@ -34,8 +36,8 @@ export default function ReceiptsScreen({ nav }) {
 
   const tags = useMemo(() => allTags(receipts), [receipts]);
   const list = useMemo(
-    () => [...filterReceipts(receipts, { query, category, tag, status: onlyReview ? 'needs_review' : null })].sort(sortBy.fn),
-    [receipts, query, category, tag, onlyReview, sortBy]
+    () => [...filterReceipts(receipts, { query, category, tag, status: onlyReview ? 'needs_review' : null })].filter((r) => !period || inPeriod(period, r.date)).sort(sortBy.fn),
+    [receipts, query, category, tag, onlyReview, sortBy, period]
   );
   const selecting = selected.length > 0;
   const toggle = (id) => setSelected((x) => (x.includes(id) ? x.filter((y) => y !== id) : [...x, id]));
@@ -72,6 +74,10 @@ export default function ReceiptsScreen({ nav }) {
           style={[s.input, { paddingLeft: 42 }]}
         />
           <View pointerEvents="none" style={{ position: 'absolute', left: 14 }}><Icon name="search" size={18} color={colors.faint} /></View>
+        </View>
+        {/* month filter: All months / pick one or more months / this year */}
+        <View style={{ marginTop: 8 }}>
+          <PeriodPicker period={period} onChange={setPeriod} allowAll />
         </View>
         {/* category drop-down (All / Needs review / each category) and sort */}
         <View style={{ flexDirection: 'row', gap: 8, marginTop: 10 }}>
