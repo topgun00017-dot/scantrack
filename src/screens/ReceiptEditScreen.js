@@ -21,6 +21,19 @@ const num = (v) => {
   return isNaN(n) ? 0 : n;
 };
 
+// Dates are stored as YYYY-MM-DD but shown and typed as DD-MM-YYYY; hyphens are added while typing.
+const isoToDmy = (iso) => (/^\d{4}-\d{2}-\d{2}$/.test(iso || '') ? `${iso.slice(8, 10)}-${iso.slice(5, 7)}-${iso.slice(0, 4)}` : '');
+const dashDigits = (d) => (d.length <= 2 ? d : d.length <= 4 ? `${d.slice(0, 2)}-${d.slice(2)}` : `${d.slice(0, 2)}-${d.slice(2, 4)}-${d.slice(4, 8)}`);
+// DD-MM-YYYY text → YYYY-MM-DD, or '' if it isn't a real date yet.
+const dmyToIso = (text) => {
+  const d = text.replace(/\D/g, '');
+  if (d.length !== 8) return '';
+  const [dd, mm, yyyy] = [+d.slice(0, 2), +d.slice(2, 4), +d.slice(4, 8)];
+  const dt = new Date(yyyy, mm - 1, dd);
+  if (yyyy < 1900 || dt.getFullYear() !== yyyy || dt.getMonth() !== mm - 1 || dt.getDate() !== dd) return '';
+  return `${d.slice(4, 8)}-${d.slice(2, 4)}-${d.slice(0, 2)}`;
+};
+
 export default function ReceiptEditScreen({ nav, params }) {
   const bottomInset = useSafeAreaInsets().bottom; // clear Android's navigation bar
   const keyboard = useKeyboardHeight(); // Android: lift content above the on-screen keyboard
@@ -42,6 +55,16 @@ export default function ReceiptEditScreen({ nav, params }) {
     lineItems: (src.lineItems || []).map((i) => ({ ...i, amount: String(i.amount ?? ''), qty: String(i.qty ?? 1) })),
     status: src.status || 'processed',
   });
+  const [dateText, setDateText] = useState(isoToDmy(src.date));
+  // Keep only digits, add the hyphens, and treat deleting a hyphen as deleting the digit before it.
+  const typeDate = (text) => {
+    let digits = text.replace(/\D/g, '').slice(0, 8);
+    const prevDigits = dateText.replace(/\D/g, '');
+    if (text.length < dateText.length && digits === prevDigits) digits = digits.slice(0, -1);
+    const shown = dashDigits(digits);
+    setDateText(shown);
+    setF((x) => ({ ...x, date: dmyToIso(shown) }));
+  };
   const [tagInput, setTagInput] = useState('');
   const [zoom, setZoom] = useState(false);
   const [catEditor, setCatEditor] = useState(false);
@@ -146,7 +169,7 @@ export default function ReceiptEditScreen({ nav, params }) {
 
   const save = () => {
     if (!f.merchant.trim()) return showAlert('Merchant missing', 'Add the merchant name.');
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(f.date)) return showAlert('Check the date', 'Use the format YYYY-MM-DD.');
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(f.date)) return showAlert('Check the date', 'Type a real date as DD-MM-YYYY, for example 16-11-2026.');
     const total = num(f.total);
     const tax = num(f.tax);
     const rec = {
@@ -315,7 +338,16 @@ export default function ReceiptEditScreen({ nav, params }) {
         <SectionTitle>Details</SectionTitle>
         <Field label="Merchant" highlight={doubt.has('merchant')} value={f.merchant} onChangeText={(v) => { set('merchant')(v); if (isNew && f.category === 'Others') set('category')(autoCategorize(v)); }} placeholder="e.g. Petronas Klang" />
         <View style={{ flexDirection: 'row', gap: 10 }}>
-          <Field style={{ flex: 1 }} label="Date (YYYY-MM-DD)" highlight={doubt.has('date')} value={f.date} onChangeText={set('date')} placeholder="2026-11-05" />
+          <Field
+            style={{ flex: 1 }}
+            label="Date (DD-MM-YYYY)"
+            highlight={doubt.has('date')}
+            value={dateText}
+            onChangeText={typeDate}
+            placeholder="16-11-2026"
+            keyboardType="number-pad"
+            maxLength={10}
+          />
           <Field style={{ width: 90 }} label="Currency" value={f.currency} onChangeText={(v) => set('currency')(v.toUpperCase())} autoCapitalize="characters" maxLength={3} />
         </View>
         <View style={{ flexDirection: 'row', gap: 10 }}>
