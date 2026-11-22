@@ -10,9 +10,15 @@ import { findDuplicate, today } from './utils';
 export const emptyDraft = (extra = {}) => ({ date: today(), total: 0, tax: 0, lineItems: [], category: 'Others', ...extra });
 
 let cameraListener = null;
-// Open the full-screen receipt camera from anywhere (the orange button in the tab bar).
+// The orange camera button: on Android, Google's document scanner finds the receipt's edges and
+// keeps only the receipt (straightened, background removed). Elsewhere, or if that scanner isn't
+// available, the app's own camera opens.
 export function openCamera() {
-  cameraListener?.();
+  cameraListener?.('scan');
+}
+// Hold the orange button: the app's own camera (guide frame, Upload, Manual, company).
+export function openClassicCamera() {
+  cameraListener?.('classic');
 }
 export function setCameraListener(fn) {
   cameraListener = fn;

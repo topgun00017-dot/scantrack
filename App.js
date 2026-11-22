@@ -9,7 +9,7 @@ import DialogHost from './src/DialogHost';
 import ToastHost from './src/Toast';
 import ReceiptResultHost from './src/ReceiptResult';
 import CameraModal from './src/CameraModal';
-import { openCamera } from './src/capture';
+import { openCamera, openClassicCamera } from './src/capture';
 import { CompaniesProvider, useCompanies } from './src/companies';
 
 import HomeScreen from './src/screens/HomeScreen';
@@ -82,7 +82,7 @@ function Shell({ tab, setTab }) {
             const active = t.key === tab;
             if (t.center) {
               return (
-                <Pressable key={t.key} onPress={openCamera} style={styles.tab}>
+                <Pressable key={t.key} onPress={openCamera} onLongPress={openClassicCamera} style={styles.tab}>
                   <View style={[styles.fab, active && { borderColor: colors.text }]}>
                     <Icon name={t.icon} size={26} color={colors.accentText} />
                   </View>

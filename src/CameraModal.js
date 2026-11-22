@@ -1,4 +1,5 @@
-// Full-screen receipt camera, opened from the orange button on any screen.
+// Receipt capture. The orange button opens Google's document scanner on Android (see smartScan);
+// holding it opens this full-screen camera.
 // Guide frame (photo is cropped to it), photo taken only when the shutter is pressed,
 // flash, company to save to, and Upload / Scan / Manual at the bottom.
 import React, { useEffect, useRef, useState } from 'react';
@@ -44,10 +45,12 @@ export default function CameraModal({ nav }) {
   const cam = useRef(null);
   const { busy, processPhoto, fromGallery, manual, aiReady } = useCapture(nav);
 
+  const smartScan = () => smartScanRef.current && smartScanRef.current();
   const openRef = useRef(false);
   openRef.current = open;
   useEffect(() => {
-    setCameraListener(() => {
+    setCameraListener((mode) => {
+      if (mode === 'scan' && Platform.OS === 'android') return smartScan();
       setReady(false);
       setShooting(false);
       setOpen(true);
@@ -105,6 +108,32 @@ export default function CameraModal({ nav }) {
     }
   };
 
+  // Google's document scanner (ML Kit): detects the receipt, crops and straightens it, and drops
+  // the background. Falls back to the app's own camera if it can't start.
+  const smartScanRef = useRef(null);
+  smartScanRef.current = async () => {
+    let res;
+    try {
+      const Scanner = require('react-native-document-scanner-plugin').default;
+      res = await Scanner.scanDocument({ maxNumDocuments: 1, croppedImageQuality: 90 });
+    } catch {
+      setReady(false);
+      setShooting(false);
+      return setOpen(true);
+    }
+    const uri = res?.scannedImages?.[0];
+    if (res?.status === 'cancel' || !uri) return;
+    try {
+      const first = await ImageManipulator.manipulate(uri).renderAsync();
+      const ctx = first.width > 1600 ? ImageManipulator.manipulate(uri).resize({ width: 1600 }) : ImageManipulator.manipulate(uri);
+      const img = await ctx.renderAsync();
+      const saved = await img.saveAsync({ format: SaveFormat.JPEG, compress: 0.75, base64: true });
+      await processPhoto({ uri: saved.uri, base64: saved.base64, mimeType: 'image/jpeg' });
+    } catch {
+      await processPhoto({ uri });
+    }
+  };
+
   const close = () => setOpen(false);
   const goGallery = async () => {
     await fromGallery(); // progress shows over the camera; one photo opens the review form
@@ -115,7 +144,20 @@ export default function CameraModal({ nav }) {
     manual();
   };
 
-  if (!open) return null;
+  if (!open) {
+    // Reading a receipt from the document scanner: show progress over the app.
+    if (!busy) return null;
+    return (
+      <Modal visible animationType="fade" onRequestClose={() => {}} statusBarTranslucent>
+        <View style={{ flex: 1, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+          <Image source={{ uri: busy.uri }} style={{ width: 200, height: 280, borderRadius: 14, borderWidth: 1, borderColor: colors.border }} resizeMode="contain" />
+          <ActivityIndicator color={colors.accent} size="large" style={{ marginTop: 20 }} />
+          <Text style={{ color: colors.text, fontSize: 18, fontWeight: '800', marginTop: 10 }}>{busy.label}</Text>
+          <Text style={{ color: colors.muted, marginTop: 4 }}>Merchant, date, items, tax and total</Text>
+        </View>
+      </Modal>
+    );
+  }
   const granted = isWeb || perm?.granted;
   const dim = 'rgba(244,246,250,0.9)'; // the app's light background, slightly see-through
   const corner = { position: 'absolute', width: 28, height: 28, borderColor: colors.accent };
