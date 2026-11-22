@@ -167,7 +167,7 @@ export default function ReceiptEditScreen({ nav, params }) {
     );
   }
 
-  const save = () => {
+  const doSave = () => {
     if (!f.merchant.trim()) return showAlert('Merchant missing', 'Add the merchant name.');
     if (!/^\d{4}-\d{2}-\d{2}$/.test(f.date)) return showAlert('Check the date', 'Type a real date as DD-MM-YYYY, for example 16-11-2026.');
     const total = num(f.total);
@@ -220,6 +220,21 @@ export default function ReceiptEditScreen({ nav, params }) {
           : { text: 'Delete this copy', style: 'destructive', onPress: () => { deleteReceipt(existing.id); nav.back(); } },
         { text: 'Cancel', style: 'cancel' },
         { text: 'Not a duplicate', onPress: () => commit({ ...rec, confirmedUnique: true }) },
+      ]
+    );
+  };
+
+  // Ask Yes / No first; only Yes saves.
+  const save = () => {
+    if (!f.merchant.trim()) return showAlert('Merchant missing', 'Add the merchant name.');
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(f.date)) return showAlert('Check the date', 'Type a real date as DD-MM-YYYY, for example 16-11-2026.');
+    const where = target && company && target.id !== company.id ? target.name : company?.name;
+    showAlert(
+      isNew ? 'Save this receipt?' : 'Save changes?',
+      `${f.merchant.trim()}\n${isoToDmy(f.date)} · ${money(num(f.total), f.currency)} · ${f.category}${where ? `\nCompany: ${where}` : ''}`,
+      [
+        { text: 'No', style: 'cancel' },
+        { text: 'Yes', onPress: doSave },
       ]
     );
   };
