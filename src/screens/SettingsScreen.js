@@ -329,7 +329,7 @@ export default function SettingsScreen({ nav }) {
             />
           </>
         )}
-        <Text style={[s.sub, { textAlign: 'center', marginTop: 24, color: colors.faint }]}>ScanTrack · v1.0</Text>
+        <Text style={[s.sub, { textAlign: 'center', marginTop: 24, color: colors.faint }]}>JW Receipt Scan · v1.0</Text>
       </ScrollView>
     </View>
   );

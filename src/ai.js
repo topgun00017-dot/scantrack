@@ -276,7 +276,7 @@ async function agentTurnOpenAI(settings, system, history, runTool) {
 }
 
 function agentSystem(settings) {
-  return `You are the ScanTrack assistant inside a receipt & expense app. Today is ${today()}. Default currency ${settings.currency}.
+  return `You are the JW Receipt Scan assistant inside a receipt & expense app. Today is ${today()}. Default currency ${settings.currency}.
 Use the tools to find, tag, categorise and reconcile receipts. Never invent receipts or numbers; only report what tools return.
 When you change data, say exactly what you changed. Keep replies short and mobile-friendly (plain text, short lists).`;
 }

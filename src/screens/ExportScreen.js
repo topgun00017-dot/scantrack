@@ -145,7 +145,7 @@ export default function ExportScreen({ nav, params }) {
           showAlert('Sign in to Google Drive first', 'Go to Settings › Google Drive backup and sign in, then try again.');
           return;
         }
-        const url = await Drive.saveAsGoogleSheet(`ScanTrack ${base.replace(/^receipts_?/, '').replace(/_/g, ' ') || 'receipts'}`.trim(), buildWorkbookBase64(list, true), list.length);
+        const url = await Drive.saveAsGoogleSheet(`JW Receipt Scan ${base.replace(/^receipts_?/, '').replace(/_/g, ' ') || 'receipts'}`.trim(), buildWorkbookBase64(list, true), list.length);
         showAlert('Saved to Google Sheets', 'A copy is in your Google Drive under ScanTrack Receipts. Open it and tap Share to give your users access.', [
           { text: 'Share link', onPress: () => Share.share({ message: url }) },
           { text: 'Open', onPress: () => Linking.openURL(url) },

@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "ScanTrack",
+    "name": "JW Receipt Scan",
     "slug": "scantrack",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -9,8 +9,8 @@
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
-        "NSCameraUsageDescription": "ScanTrack uses the camera to scan your receipts.",
-        "NSPhotoLibraryUsageDescription": "ScanTrack lets you upload receipt photos from your library."
+        "NSCameraUsageDescription": "JW Receipt Scan uses the camera to scan your receipts.",
+        "NSPhotoLibraryUsageDescription": "JW Receipt Scan lets you upload receipt photos from your library."
       },
       "bundleIdentifier": "com.scantrack.app"
     },
@@ -35,15 +35,15 @@
       [
         "expo-image-picker",
         {
-          "cameraPermission": "ScanTrack uses the camera to scan your receipts.",
-          "photosPermission": "ScanTrack lets you upload receipt photos from your library.",
+          "cameraPermission": "JW Receipt Scan uses the camera to scan your receipts.",
+          "photosPermission": "JW Receipt Scan lets you upload receipt photos from your library.",
           "microphonePermission": false
         }
       ],
       [
         "expo-camera",
         {
-          "cameraPermission": "ScanTrack uses the camera to scan your receipts.",
+          "cameraPermission": "JW Receipt Scan uses the camera to scan your receipts.",
           "recordAudioAndroid": false,
           "barcodeScannerEnabled": false
         }

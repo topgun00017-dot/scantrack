@@ -287,7 +287,7 @@ export async function buildAccountantPackage(receipts, settings, period) {
   zip.file('receipts.xlsx', buildWorkbookBase64(receipts), { base64: true });
   zip.file(
     'README.txt',
-    `Bookkeeping package from ${settings.name || 'ScanTrack user'}${settings.company ? ` (${settings.company})` : ''}\n` +
+    `Bookkeeping package from ${settings.name || 'JW Receipt Scan user'}${settings.company ? ` (${settings.company})` : ''}\n` +
       `Period: ${period.from} to ${period.to}\nReceipts: ${receipts.length}\nTotal: ${money(sum(receipts), settings.currency)}\nTax: ${money(sum(receipts, 'tax'), settings.currency)}\n\n` +
       `Files:\n  summary       - totals by category and itemised list\n  receipts.csv  - one row per receipt\n  receipts.xlsx - receipts, category summary, line items\n  images/       - original receipt photos (file names match the "Image file name" column)\n`
   );
