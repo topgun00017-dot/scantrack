@@ -4,7 +4,7 @@ import { Icon } from '../icons';
 import CompanySwitcher from '../CompanySwitcher';
 import React, { useMemo, useState } from 'react';
 import { PeriodPicker, inPeriod } from '../period';
-import { AddReceiptsPanel, AddReceiptsSheet } from '../AddReceipts';
+import { AddButton, AddReceiptsPanel, AddReceiptsSheet } from '../AddReceipts';
 import { Alert, FlatList, Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { useStore } from '../store';
 import { Button, Chip, ChipRow, Empty, Header, ReceiptRow, s } from '../components';
@@ -68,10 +68,13 @@ export default function ReceiptsScreen({ nav }) {
             <Text style={{ color: colors.accentInk, fontWeight: '700' }} onPress={() => setSelected([])}>Cancel</Text>
           ) : (
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
-              <Pressable onPress={() => setAddOpen(true)} hitSlop={8} style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.accent, borderRadius: 999, paddingVertical: 6, paddingHorizontal: 12 }}>
-                <Icon name="plus" size={16} color={colors.accentText} />
-                <Text style={{ color: colors.accentText, fontWeight: '800' }}>Add</Text>
-              </Pressable>
+              <AddButton
+                hint={!settings.addHintSeen}
+                onPress={() => {
+                  if (!settings.addHintSeen) setSettings({ addHintSeen: true });
+                  setAddOpen(true);
+                }}
+              />
               <Text style={{ color: colors.accentInk, fontWeight: '700' }} onPress={() => setSelected(list.map((r) => r.id))}>Select</Text>
             </View>
           )

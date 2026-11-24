@@ -1,7 +1,7 @@
 // "Add receipts" panel: scan with the camera, pick photos, or pick files (photos, HEIC or PDF)
 // from anywhere on the phone. Shown in a pop-up from Receipts' "+ Add" and inline when a list is empty.
-import React from 'react';
-import { Modal, Pressable, Text, View } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { Animated, Modal, Pressable, Text, View } from 'react-native';
 import { Icon } from './icons';
 import { colors, radius } from './theme';
 import { s } from './components';
@@ -61,5 +61,44 @@ export function AddReceiptsSheet({ visible, onClose }) {
         </Pressable>
       </Pressable>
     </Modal>
+  );
+}
+
+// "+ Add" button for the Receipts header. Until it has been tapped once, a blinking arrow nudges
+// towards it and the button gently pulses so it's easy to find.
+export function AddButton({ onPress, hint }) {
+  const t = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (!hint) return;
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(t, { toValue: 1, duration: 550, useNativeDriver: true }),
+        Animated.timing(t, { toValue: 0, duration: 550, useNativeDriver: true }),
+      ])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [hint]);
+  const arrowX = t.interpolate({ inputRange: [0, 1], outputRange: [-6, 2] });
+  const arrowOpacity = t.interpolate({ inputRange: [0, 1], outputRange: [0.25, 1] });
+  const pulse = t.interpolate({ inputRange: [0, 1], outputRange: [1, 1.08] });
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+      {hint && (
+        <Animated.View style={{ opacity: arrowOpacity, transform: [{ translateX: arrowX }] }}>
+          <Icon name="arrow-right" size={22} color={colors.accentInk} strokeWidth={2.6} />
+        </Animated.View>
+      )}
+      <Animated.View style={{ transform: [{ scale: hint ? pulse : 1 }] }}>
+        <Pressable
+          onPress={onPress}
+          hitSlop={8}
+          style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.accent, borderRadius: 999, paddingVertical: 6, paddingHorizontal: 12, borderWidth: hint ? 2 : 0, borderColor: colors.accentInk }}
+        >
+          <Icon name="plus" size={16} color={colors.accentText} />
+          <Text style={{ color: colors.accentText, fontWeight: '800' }}>Add</Text>
+        </Pressable>
+      </Animated.View>
+    </View>
   );
 }
