@@ -4,6 +4,7 @@ import { Icon } from '../icons';
 import CompanySwitcher from '../CompanySwitcher';
 import React, { useMemo, useState } from 'react';
 import { PeriodPicker, inPeriod } from '../period';
+import { AddReceiptsPanel, AddReceiptsSheet } from '../AddReceipts';
 import { Alert, FlatList, Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { useStore } from '../store';
 import { Button, Chip, ChipRow, Empty, Header, ReceiptRow, s } from '../components';
@@ -27,6 +28,7 @@ export default function ReceiptsScreen({ nav }) {
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState(null);
   const [period, setPeriod] = useState(null); // null = all months
+  const [addOpen, setAddOpen] = useState(false);
   const [tag, setTag] = useState(null);
   const [onlyReview, setOnlyReview] = useState(false);
   const [catOpen, setCatOpen] = useState(false);
@@ -61,7 +63,19 @@ export default function ReceiptsScreen({ nav }) {
       <Header
         title="Receipts"
         subtitle={`${list.length} shown · ${money(sum(list), settings.currency)}`}
-        right={selecting ? <Text style={{ color: colors.accentInk, fontWeight: '700' }} onPress={() => setSelected([])}>Cancel</Text> : <Text style={{ color: colors.accentInk, fontWeight: '700' }} onPress={() => setSelected(list.map((r) => r.id))}>Select</Text>}
+        right={
+          selecting ? (
+            <Text style={{ color: colors.accentInk, fontWeight: '700' }} onPress={() => setSelected([])}>Cancel</Text>
+          ) : (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+              <Pressable onPress={() => setAddOpen(true)} hitSlop={8} style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.accent, borderRadius: 999, paddingVertical: 6, paddingHorizontal: 12 }}>
+                <Icon name="plus" size={16} color={colors.accentText} />
+                <Text style={{ color: colors.accentText, fontWeight: '800' }}>Add</Text>
+              </Pressable>
+              <Text style={{ color: colors.accentInk, fontWeight: '700' }} onPress={() => setSelected(list.map((r) => r.id))}>Select</Text>
+            </View>
+          )
+        }
       />
       <View style={{ paddingHorizontal: 16 }}>
         <CompanySwitcher onManage={() => nav.push('settings')} style={{ marginBottom: 10 }} />
@@ -156,7 +170,7 @@ export default function ReceiptsScreen({ nav }) {
         data={list}
         keyExtractor={(r) => r.id}
         contentContainerStyle={{ padding: 16, paddingBottom: selecting ? 120 : 24 }}
-        ListEmptyComponent={<Empty title="No receipts found" text="Try a different search or filter." />}
+        ListEmptyComponent={receipts.length ? <Empty title="No receipts found" text="Try a different search or filter." /> : <AddReceiptsPanel />}
         renderItem={({ item }) => (
           <ReceiptRow
             r={item}
@@ -203,6 +217,7 @@ export default function ReceiptsScreen({ nav }) {
           <View style={{ height: 24 }} />
         </View>
       </Modal>
+      <AddReceiptsSheet visible={addOpen} onClose={() => setAddOpen(false)} />
     </View>
   );
 }

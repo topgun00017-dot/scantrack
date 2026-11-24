@@ -116,6 +116,7 @@ export function buildWorkbookBase64(receipts, photos = false) {
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
 async function imgData(uri) {
+  if (/\.pdf$/i.test(uri || '')) return null; // PDF receipts can't be drawn inside a PDF report
   try {
     if (dataUrlParts(uri)) return uri;
     const b = await FileSystem.readAsStringAsync(uri, { encoding: B64 });

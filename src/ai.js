@@ -81,7 +81,7 @@ function parseJSON(text) {
 
 // ---------- 1. Scan receipts: capture every line, tax and total ----------
 export async function extractReceipt(settings, base64, mimeType = 'image/jpeg') {
-  const prompt = `You are a receipt-reading engine. Read this receipt image and return ONLY JSON:
+  const prompt = `You are a receipt-reading engine. Read this receipt (a photo or a PDF such as an e-invoice) and return ONLY JSON:
 {
   "merchant": string,
   "date": "YYYY-MM-DD" (use ${today()} if unreadable),
@@ -101,8 +101,10 @@ Choose "category" from this Malaysian small-business chart of accounts:
 ${categoryGuide()}`;
 
   let d;
+  const pdf = mimeType === 'application/pdf';
   const sample = await webSample();
   if (sample) {
+    if (pdf) throw new Error('PDF receipts are read in the Android app. Type the details here instead.');
     try {
       d = await sample.json(`The attached image is a photo of a purchase receipt. ${prompt}`, { images: [base64ToBlob(base64, mimeType)] });
     } catch (e) {
@@ -115,7 +117,9 @@ ${categoryGuide()}`;
           role: 'user',
           content: [
             { type: 'text', text: prompt },
-            { type: 'image_url', image_url: { url: `data:${mimeType};base64,${base64}` } },
+            pdf
+              ? { type: 'file', file: { filename: 'receipt.pdf', file_data: `data:application/pdf;base64,${base64}` } }
+              : { type: 'image_url', image_url: { url: `data:${mimeType};base64,${base64}` } },
           ],
         },
       ],
@@ -127,7 +131,9 @@ ${categoryGuide()}`;
         {
           role: 'user',
           content: [
-            { type: 'image', source: { type: 'base64', media_type: mimeType, data: base64 } },
+            pdf
+              ? { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: base64 } }
+              : { type: 'image', source: { type: 'base64', media_type: mimeType, data: base64 } },
             { type: 'text', text: prompt },
           ],
         },

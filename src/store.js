@@ -203,13 +203,13 @@ export function StoreProvider({ children, dataKey = 'scantrack:v1', withSamples 
 
   const api = useMemo(() => {
     // Copy a picked/captured image into permanent app storage.
-    const persistImage = async (uri) => {
+    const persistImage = async (uri, extOverride) => {
       if (!uri) return null;
       if (isWeb) return uri; // web build keeps the image as a data URL
       try {
         const dir = FileSystem.documentDirectory + 'receipts/';
         await FileSystem.makeDirectoryAsync(dir, { intermediates: true }).catch(() => {});
-        const ext = (uri.split('.').pop() || 'jpg').split('?')[0].slice(0, 4);
+        const ext = extOverride || (uri.split('.').pop() || 'jpg').split('?')[0].slice(0, 4);
         const dest = `${dir}${uid()}.${ext}`;
         await FileSystem.copyAsync({ from: uri, to: dest });
         return dest;

@@ -156,7 +156,7 @@ async function monthFolder(tok, date) {
 const safe = (s) => String(s || '').replace(/[\\/:*?"<>|\n\r]+/g, ' ').replace(/\s+/g, ' ').trim();
 
 function fileName(r) {
-  const ext = (r.imageUri || '').match(/\.(png|jpe?g|webp|heic)$/i)?.[1]?.toLowerCase() || 'jpg';
+  const ext = (r.imageUri || '').match(/\.(png|jpe?g|webp|heic|pdf)$/i)?.[1]?.toLowerCase() || 'jpg';
   return `${r.date} ${safe(r.merchant).slice(0, 60)} ${money(r.total, r.currency)}.${ext}`;
 }
 
@@ -259,7 +259,7 @@ export async function syncReceipt(r) {
 
   if (!r.imageUri) return { driveFileId: null, driveFolderId: null }; // typed-in receipt: listed in the sheet only
   const base64 = await FileSystem.readAsStringAsync(r.imageUri, { encoding: FileSystem.EncodingType?.Base64 || 'base64' });
-  const mime = /\.png$/i.test(r.imageUri) ? 'image/png' : 'image/jpeg';
+  const mime = /\.pdf$/i.test(r.imageUri) ? 'application/pdf' : /\.png$/i.test(r.imageUri) ? 'image/png' : 'image/jpeg';
   const mp = multipart({ ...meta, parents: [parent] }, mime, base64);
   const made = await api(tok, `${UPLOAD}?uploadType=multipart&fields=id`, { method: 'POST', headers: { 'content-type': mp.type }, body: mp.body });
   await makePublic(tok, made.id);

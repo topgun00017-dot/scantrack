@@ -15,11 +15,31 @@ import { Icon } from '../icons';
 import { showToast } from '../Toast';
 import { showReceiptResult } from '../ReceiptResult';
 import { findDuplicate, money, prettyDate } from '../utils';
+import { isPdf } from '../capture';
+import * as FileSystem from 'expo-file-system/legacy';
+import * as IntentLauncher from 'expo-intent-launcher';
+import * as Sharing from 'expo-sharing';
 
 const num = (v) => {
   const n = parseFloat(String(v).replace(/,/g, ''));
   return isNaN(n) ? 0 : n;
 };
+
+// Open a saved PDF receipt in the phone's PDF viewer (falls back to the share sheet).
+async function openPdf(uri) {
+  try {
+    if (Platform.OS === 'android') {
+      const data = await FileSystem.getContentUriAsync(uri);
+      await IntentLauncher.startActivityAsync('android.intent.action.VIEW', { data, flags: 1, type: 'application/pdf' });
+      return;
+    }
+  } catch {}
+  try {
+    await Sharing.shareAsync(uri, { mimeType: 'application/pdf', dialogTitle: 'Open PDF receipt' });
+  } catch (e) {
+    showAlert('Could not open the PDF', 'Install a PDF viewer (for example Google Drive) and try again.');
+  }
+}
 
 // Dates are stored as YYYY-MM-DD but shown and typed as DD-MM-YYYY; hyphens are added while typing.
 const isoToDmy = (iso) => (/^\d{4}-\d{2}-\d{2}$/.test(iso || '') ? `${iso.slice(8, 10)}-${iso.slice(5, 7)}-${iso.slice(0, 4)}` : '');
@@ -273,6 +293,20 @@ export default function ReceiptEditScreen({ nav, params }) {
       {/* split view: the receipt photo stays on top, the fields scroll below it */}
       {src.imageUri && !keyboard ? (
         <Animated.View style={{ transform: [{ translateX: pan }] }}>
+        {isPdf(src.imageUri) ? (
+          // PDF receipt (e.g. an e-invoice): the photo viewer can't show it, so open it in a PDF app.
+          <Pressable onPress={() => openPdf(src.imageUri)} style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: 14, marginHorizontal: 16, padding: 16, borderRadius: 14, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, opacity: pressed ? 0.75 : 1 })}>
+            <View style={{ width: 52, height: 64, borderRadius: 8, backgroundColor: '#FDECEC', alignItems: 'center', justifyContent: 'center' }}>
+              <Icon name="file-text" size={28} color={colors.danger} />
+              <Text style={{ fontSize: 10, fontWeight: '800', color: colors.danger, marginTop: 2 }}>PDF</Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[s.body, { fontWeight: '700' }]}>PDF receipt</Text>
+              <Text style={s.sub}>Tap to open it in your PDF viewer</Text>
+            </View>
+            <Text style={{ color: colors.accentInk, fontWeight: '800' }}>Open PDF</Text>
+          </Pressable>
+        ) : (
         <Pressable onPress={() => setZoom(true)} style={{ height: Math.round(screenH * 0.3), marginHorizontal: 16, borderRadius: 14, overflow: 'hidden', backgroundColor: '#111827' }}>
           <Image source={{ uri: src.imageUri }} style={{ width: '100%', height: '100%' }} resizeMode="contain" />
           <View style={{ position: 'absolute', right: 10, bottom: 10, flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: 999, paddingVertical: 5, paddingHorizontal: 10 }}>
@@ -280,6 +314,7 @@ export default function ReceiptEditScreen({ nav, params }) {
             <Text style={{ color: '#fff', fontSize: 12, fontWeight: '700' }}>Tap to zoom</Text>
           </View>
         </Pressable>
+        )}
         </Animated.View>
       ) : null}
       <ScrollView
@@ -413,7 +448,7 @@ export default function ReceiptEditScreen({ nav, params }) {
 
       <Modal visible={zoom} transparent onRequestClose={() => setZoom(false)}>
         <Pressable style={{ flex: 1, backgroundColor: '#000', justifyContent: 'center' }} onPress={() => setZoom(false)}>
-          {src.imageUri && <Image source={{ uri: src.imageUri }} style={{ width: '100%', height: '85%' }} resizeMode="contain" />}
+          {src.imageUri && !isPdf(src.imageUri) && <Image source={{ uri: src.imageUri }} style={{ width: '100%', height: '85%' }} resizeMode="contain" />}
           <Text style={{ color: '#fff', textAlign: 'center', marginTop: 12 }}>Tap to close</Text>
         </Pressable>
       </Modal>

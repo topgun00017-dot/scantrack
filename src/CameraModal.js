@@ -43,14 +43,20 @@ export default function CameraModal({ nav }) {
   const [shooting, setShooting] = useState(false);
   const [view, setView] = useState({ w: 0, h: 0 });
   const cam = useRef(null);
-  const { busy, processPhoto, fromGallery, manual, aiReady } = useCapture(nav);
+  const { busy, processPhoto, fromGallery, fromFiles, manual, aiReady } = useCapture(nav);
 
   const smartScan = () => smartScanRef.current && smartScanRef.current();
+  const fromGalleryRef = useRef(null);
+  fromGalleryRef.current = fromGallery;
+  const fromFilesRef = useRef(null);
+  fromFilesRef.current = fromFiles;
   const openRef = useRef(false);
   openRef.current = open;
   useEffect(() => {
     setCameraListener((mode) => {
       if (mode === 'scan' && Platform.OS === 'android') return smartScan();
+      if (mode === 'gallery') return fromGalleryRef.current();
+      if (mode === 'files') return fromFilesRef.current();
       setReady(false);
       setShooting(false);
       setOpen(true);
@@ -150,7 +156,14 @@ export default function CameraModal({ nav }) {
     return (
       <Modal visible animationType="fade" onRequestClose={() => {}} statusBarTranslucent>
         <View style={{ flex: 1, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-          <Image source={{ uri: busy.uri }} style={{ width: 200, height: 280, borderRadius: 14, borderWidth: 1, borderColor: colors.border }} resizeMode="contain" />
+          {busy.uri ? (
+            <Image source={{ uri: busy.uri }} style={{ width: 200, height: 280, borderRadius: 14, borderWidth: 1, borderColor: colors.border }} resizeMode="contain" />
+          ) : (
+            <View style={{ width: 200, height: 280, borderRadius: 14, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center' }}>
+              <Icon name="file-text" size={56} color={colors.accentInk} />
+              <Text style={{ color: colors.muted, marginTop: 8, fontWeight: '700' }}>PDF receipt</Text>
+            </View>
+          )}
           <ActivityIndicator color={colors.accent} size="large" style={{ marginTop: 20 }} />
           <Text style={{ color: colors.text, fontSize: 18, fontWeight: '800', marginTop: 10 }}>{busy.label}</Text>
           <Text style={{ color: colors.muted, marginTop: 4 }}>Merchant, date, items, tax and total</Text>
@@ -235,7 +248,7 @@ export default function CameraModal({ nav }) {
         {/* reading the receipt */}
         {busy && (
           <View style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-            <Image source={{ uri: busy.uri }} style={{ width: 200, height: 280, borderRadius: 14, borderWidth: 1, borderColor: colors.border }} resizeMode="cover" />
+            {busy.uri ? <Image source={{ uri: busy.uri }} style={{ width: 200, height: 280, borderRadius: 14, borderWidth: 1, borderColor: colors.border }} resizeMode="cover" /> : <Icon name="file-text" size={56} color={colors.accentInk} />}
             <ActivityIndicator color={colors.accent} size="large" style={{ marginTop: 20 }} />
             <Text style={{ color: colors.text, fontSize: 18, fontWeight: '800', marginTop: 10 }}>{busy.label}</Text>
             <Text style={{ color: colors.muted, marginTop: 4 }}>Merchant, date, items, tax and total</Text>

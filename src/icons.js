@@ -4,6 +4,8 @@ import React from 'react';
 import Wallet from 'lucide-react-native/icons/wallet';
 import Receipt from 'lucide-react-native/icons/receipt';
 import Camera from 'lucide-react-native/icons/camera';
+import Upload from 'lucide-react-native/icons/upload';
+import FolderOpen from 'lucide-react-native/icons/folder-open';
 import Lock from 'lucide-react-native/icons/lock';
 import LockOpen from 'lucide-react-native/icons/lock-open';
 import Sparkles from 'lucide-react-native/icons/sparkles';
@@ -68,6 +70,8 @@ const ICONS = {
   wallet: Wallet,
   receipt: Receipt,
   camera: Camera,
+  upload: Upload,
+  'folder-open': FolderOpen,
   lock: Lock,
   'lock-open': LockOpen,
   sparkles: Sparkles,
