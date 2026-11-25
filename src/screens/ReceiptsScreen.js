@@ -68,13 +68,7 @@ export default function ReceiptsScreen({ nav }) {
             <Text style={{ color: colors.accentInk, fontWeight: '700' }} onPress={() => setSelected([])}>Cancel</Text>
           ) : (
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
-              <AddButton
-                hint={!settings.addHintSeen}
-                onPress={() => {
-                  if (!settings.addHintSeen) setSettings({ addHintSeen: true });
-                  setAddOpen(true);
-                }}
-              />
+              <AddButton hint onPress={() => setAddOpen(true)} />
               <Text style={{ color: colors.accentInk, fontWeight: '700' }} onPress={() => setSelected(list.map((r) => r.id))}>Select</Text>
             </View>
           )

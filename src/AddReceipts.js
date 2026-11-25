@@ -64,8 +64,8 @@ export function AddReceiptsSheet({ visible, onClose }) {
   );
 }
 
-// "+ Add" button for the Receipts header. Until it has been tapped once, a blinking arrow nudges
-// towards it and the button gently pulses so it's easy to find.
+// "+ Add" button for the Receipts header: a blinking arrow nudges towards it and the button gently
+// pulses so it's easy to find.
 export function AddButton({ onPress, hint }) {
   const t = useRef(new Animated.Value(0)).current;
   useEffect(() => {
@@ -79,14 +79,14 @@ export function AddButton({ onPress, hint }) {
     loop.start();
     return () => loop.stop();
   }, [hint]);
-  const arrowX = t.interpolate({ inputRange: [0, 1], outputRange: [-6, 2] });
-  const arrowOpacity = t.interpolate({ inputRange: [0, 1], outputRange: [0.25, 1] });
+  const arrowX = t.interpolate({ inputRange: [0, 1], outputRange: [-8, 2] });
+  const arrowOpacity = t.interpolate({ inputRange: [0, 1], outputRange: [0.15, 1] });
   const pulse = t.interpolate({ inputRange: [0, 1], outputRange: [1, 1.08] });
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
       {hint && (
         <Animated.View style={{ opacity: arrowOpacity, transform: [{ translateX: arrowX }] }}>
-          <Icon name="arrow-right" size={22} color={colors.accentInk} strokeWidth={2.6} />
+          <Icon name="arrow-right" size={28} color={colors.danger} strokeWidth={3} />
         </Animated.View>
       )}
       <Animated.View style={{ transform: [{ scale: hint ? pulse : 1 }] }}>
